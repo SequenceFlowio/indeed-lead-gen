@@ -4,6 +4,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "SequenceFlow Leads",
   description: "Lead generation dashboard for SequenceFlow",
+  icons: {
+    icon: "/favicon.png",
+  },
 };
 
 export default function RootLayout({

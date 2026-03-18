@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Moon, Sun, LogOut } from "lucide-react";
 
@@ -50,14 +51,16 @@ export default function Header() {
           href="https://getsequenceflow.nl"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2.5"
+          className="flex items-center gap-3"
         >
-          <div className="h-8 w-8 rounded-lg bg-[#C7F56F] flex items-center justify-center flex-shrink-0">
-            <span className="text-xs font-black text-[#1a1a1a]">SF</span>
-          </div>
-          <span className="text-sm font-bold text-gray-900 dark:text-white tracking-tight">
-            SequenceFlow
-          </span>
+          <Image
+            src={isDark ? "/logo-wit.png" : "/logo-zwart.png"}
+            alt="SequenceFlow"
+            height={32}
+            width={160}
+            className="h-8 w-auto object-contain"
+            priority
+          />
           <span className="text-xs text-gray-400 dark:text-gray-500 font-normal hidden sm:inline">
             Leads
           </span>

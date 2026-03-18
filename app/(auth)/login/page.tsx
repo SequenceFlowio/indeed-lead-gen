@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import Image from "next/image";
 
 function GoogleIcon() {
   return (
@@ -84,11 +85,16 @@ function LoginContent() {
 
         {/* Right panel — form */}
         <div className="relative flex flex-1 flex-col justify-center px-10 py-12">
-          {/* Logo placeholder */}
-          <div className="absolute top-6 right-8 flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-[#C7F56F] flex items-center justify-center">
-              <span className="text-xs font-black text-[#1a1a1a]">SF</span>
-            </div>
+          {/* Logo */}
+          <div className="absolute top-6 right-8">
+            <Image
+              src="/logo-zwart.png"
+              alt="SequenceFlow"
+              height={28}
+              width={140}
+              className="h-7 w-auto object-contain"
+              priority
+            />
           </div>
 
           <div className="max-w-sm mx-auto w-full">
