@@ -1,0 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    @apply bg-[#f9f9f7] text-[#1a1a1a] antialiased dark:bg-[#0d0d0d] dark:text-[#f0f0f0];
+    font-family: Inter, system-ui, sans-serif;
+  }
+}
