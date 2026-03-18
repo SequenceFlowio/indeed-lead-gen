@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Edit3, Save, Send, Loader2, Mail, AlertCircle, CheckCircle } from "lucide-react";
+import { Edit3, Save, Loader2, Mail, AlertCircle, CheckCircle } from "lucide-react";
 import { Lead } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -16,7 +16,6 @@ export default function EmailPreview({ lead, onUpdate }: EmailPreviewProps) {
   const [body, setBody] = useState(lead.draft_email ?? "");
   const [contactEmail, setContactEmail] = useState(lead.contact_email ?? "");
   const [generating, setGenerating] = useState(false);
-  const [sending, setSending] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
@@ -64,25 +63,6 @@ export default function EmailPreview({ lead, onUpdate }: EmailPreviewProps) {
       showToast("error", "Opslaan mislukt");
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function handleSend() {
-    if (!contactEmail) {
-      showToast("error", "Geen e-mailadres opgegeven");
-      return;
-    }
-    setSending(true);
-    try {
-      const res = await fetch(`/api/leads/${lead.id}/send`, { method: "POST" });
-      if (!res.ok) throw new Error(await res.text());
-      const updated = await res.json();
-      onUpdate(updated);
-      showToast("success", "Verstuurd via Instantly");
-    } catch {
-      showToast("error", "Versturen mislukt");
-    } finally {
-      setSending(false);
     }
   }
 
@@ -223,10 +203,10 @@ export default function EmailPreview({ lead, onUpdate }: EmailPreviewProps) {
         )}
 
         {/* Actions */}
-        <div className="flex gap-2 pt-1 flex-wrap">
+        <div className="flex gap-2 pt-1">
           <button
             onClick={handleGenerate}
-            disabled={generating || sending}
+            disabled={generating}
             className="flex items-center gap-1.5 rounded-lg bg-[#C7F56F] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] transition-colors disabled:opacity-50"
           >
             {generating ? (
@@ -236,21 +216,6 @@ export default function EmailPreview({ lead, onUpdate }: EmailPreviewProps) {
             )}
             {body ? "Opnieuw genereren" : "Genereer e-mail"}
           </button>
-
-          {body && (
-            <button
-              onClick={handleSend}
-              disabled={sending || generating || lead.status === "sent"}
-              className="flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
-            >
-              {sending ? (
-                <Loader2 size={14} className="animate-spin" />
-              ) : (
-                <Send size={14} />
-              )}
-              {lead.status === "sent" ? "Verstuurd" : "Stuur via Instantly"}
-            </button>
-          )}
         </div>
       </div>
     </div>

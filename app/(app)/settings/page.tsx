@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Save, Loader2, ToggleLeft, ToggleRight, Eye, EyeOff } from "lucide-react";
+import { Plus, Trash2, Save, Loader2, ToggleLeft, ToggleRight } from "lucide-react";
 import { SearchQuery } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 
@@ -31,9 +31,6 @@ export default function SettingsPage() {
   const [showAddForm, setShowAddForm] = useState(false);
 
   // Settings state
-  const [instantlyKey, setInstantlyKey] = useState("");
-  const [instantlyVisible, setInstantlyVisible] = useState(false);
-  const [dailyLimit, setDailyLimit] = useState("20");
   const [minScore, setMinScore] = useState("7");
   const [savingSettings, setSavingSettings] = useState(false);
 
@@ -52,8 +49,6 @@ export default function SettingsPage() {
     const { data } = await createClient().from("settings").select("*");
     if (data) {
       const kvMap = Object.fromEntries(data.map((r: { key: string; value: string }) => [r.key, r.value]));
-      setInstantlyKey(kvMap["instantly_api_key"] ?? "");
-      setDailyLimit(kvMap["daily_send_limit"] ?? "20");
       setMinScore(kvMap["min_score_threshold"] ?? "7");
     }
   }
@@ -94,8 +89,6 @@ export default function SettingsPage() {
   async function saveSettings() {
     setSavingSettings(true);
     const upserts = [
-      { key: "instantly_api_key", value: instantlyKey, updated_at: new Date().toISOString() },
-      { key: "daily_send_limit", value: dailyLimit, updated_at: new Date().toISOString() },
       { key: "min_score_threshold", value: minScore, updated_at: new Date().toISOString() },
     ];
     await createClient().from("settings").upsert(upserts);
@@ -109,7 +102,7 @@ export default function SettingsPage() {
           Instellingen
         </h1>
         <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
-          Beheer zoekopdrachten, limieten en API-koppelingen
+          Beheer zoekopdrachten en AI-instellingen
         </p>
       </div>
 
@@ -236,85 +229,28 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      {/* Limits & API */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Limits */}
-        <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6">
-          <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-            Limieten
-          </h2>
-          <div className="flex flex-col gap-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
-                Dagelijkse verstuurlimiet
-              </label>
-              <input
-                type="number"
-                value={dailyLimit}
-                onChange={(e) => setDailyLimit(e.target.value)}
-                min="1"
-                max="100"
-                className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30"
-              />
-              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">Max. e-mails per dag via Instantly</p>
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
-                Minimum AI-score voor kwalificatie
-              </label>
-              <input
-                type="number"
-                value={minScore}
-                onChange={(e) => setMinScore(e.target.value)}
-                min="1"
-                max="10"
-                className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30"
-              />
-              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">Leads met een lagere score worden niet automatisch gekwalificeerd</p>
-            </div>
-          </div>
-        </section>
-
-        {/* API connections */}
-        <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6">
-          <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-            API Koppelingen
-          </h2>
-          <div className="flex flex-col gap-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
-                Instantly API Key
-              </label>
-              <div className="relative">
-                <input
-                  type={instantlyVisible ? "text" : "password"}
-                  value={instantlyKey}
-                  onChange={(e) => setInstantlyKey(e.target.value)}
-                  placeholder="inst_..."
-                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 pr-10 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30 font-mono"
-                />
-                <button
-                  type="button"
-                  onClick={() => setInstantlyVisible((v) => !v)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {instantlyVisible ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
-              </div>
-              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                Vind uw API key in het Instantly dashboard
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2 rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2">
-              <div className="h-2 w-2 rounded-full bg-gray-300 dark:bg-gray-600" />
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                OpenAI: configureer via <code className="font-mono bg-gray-100 dark:bg-gray-700 px-1 rounded">OPENAI_API_KEY</code> in .env.local
-              </span>
-            </div>
-          </div>
-        </section>
-      </div>
+      {/* AI Settings */}
+      <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6 max-w-sm">
+        <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+          AI Instellingen
+        </h2>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
+            Minimum AI-score voor kwalificatie
+          </label>
+          <input
+            type="number"
+            value={minScore}
+            onChange={(e) => setMinScore(e.target.value)}
+            min="1"
+            max="10"
+            className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30"
+          />
+          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+            Leads met een lagere score worden niet automatisch gekwalificeerd
+          </p>
+        </div>
+      </section>
 
       {/* Save button */}
       <div className="flex justify-end">
