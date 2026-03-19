@@ -77,6 +77,14 @@ export async function POST() {
 
   const limitPerQuery = Math.max(1, Math.min(50, Math.floor((budgetMb * 1000) / (runsPerMonth * queries.length * KB_PER_RESULT))));
 
+  // Build Indeed query exclusions from blocklist (single-word terms only — multi-word need quotes and may be less reliable)
+  // Cap at 20 terms to avoid overly long queries
+  const exclusionTerms = blocklist
+    .filter((term) => !term.includes(" "))   // single-word only for reliability
+    .slice(0, 20)
+    .map((term) => `-${term}`)
+    .join(" ");
+
   let totalScraped = 0;
   let totalInserted = 0;
   let totalSkipped = 0;
@@ -89,7 +97,7 @@ export async function POST() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          query: q.query,
+          query: exclusionTerms ? `${q.query} ${exclusionTerms}` : q.query,
           location: "Nederland",
           limit: limitPerQuery,
         }),
