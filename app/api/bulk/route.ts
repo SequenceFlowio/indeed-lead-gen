@@ -9,9 +9,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No IDs provided" }, { status: 400 });
   }
 
+  const updates: Record<string, unknown> = { status, updated_at: new Date().toISOString() };
+  if (status === "rejected") {
+    updates.rejected_at = new Date().toISOString();
+  }
+
   const { error } = await supabase
     .from("leads")
-    .update({ status, updated_at: new Date().toISOString() })
+    .update(updates)
     .in("id", ids);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

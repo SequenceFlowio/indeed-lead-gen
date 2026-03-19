@@ -14,9 +14,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const supabase = await createClient();
   const body = await request.json();
 
+  const updates: Record<string, unknown> = { ...body, updated_at: new Date().toISOString() };
+  if (body.status === "rejected" && !body.rejected_at) {
+    updates.rejected_at = new Date().toISOString();
+  }
+
   const { data, error } = await supabase
     .from("leads")
-    .update({ ...body, updated_at: new Date().toISOString() })
+    .update(updates)
     .eq("id", id)
     .select()
     .single();

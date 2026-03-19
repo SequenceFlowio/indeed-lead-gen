@@ -37,6 +37,8 @@ export default function LeadDetailPage() {
   const [lead, setLead] = useState<Lead | null>(null);
   const [loading, setLoading] = useState(true);
   const [qualifying, setQualifying] = useState(false);
+  const [statusChanging, setStatusChanging] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
   const [descExpanded, setDescExpanded] = useState(false);
 
   const fetchLead = useCallback(async () => {
@@ -53,12 +55,26 @@ export default function LeadDetailPage() {
 
   async function handleStatusChange(status: LeadStatus) {
     if (!lead) return;
-    const res = await fetch(`/api/leads/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    if (res.ok) setLead({ ...lead, status });
+    setStatusChanging(true);
+    setStatusError(null);
+    try {
+      const res = await fetch(`/api/leads/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setLead(updated);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setStatusError(data.error ?? "Status wijzigen mislukt");
+      }
+    } catch {
+      setStatusError("Verbindingsfout");
+    } finally {
+      setStatusChanging(false);
+    }
   }
 
   async function handleQualify() {
@@ -144,27 +160,36 @@ export default function LeadDetailPage() {
               )}
             </div>
 
-            <div className="mt-4 flex items-center gap-3 flex-wrap">
-              <StatusBadge status={lead.status} />
-              <select
-                value={lead.status}
-                onChange={(e) => handleStatusChange(e.target.value as LeadStatus)}
-                className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2.5 py-1 text-xs outline-none focus:border-[#C7F56F] cursor-pointer"
-              >
-                {STATUS_OPTIONS.map((s) => (
-                  <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-                ))}
-              </select>
-              {lead.url && (
-                <a
-                  href={lead.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 px-2.5 py-1 text-xs text-gray-600 dark:text-gray-300 hover:border-[#C7F56F] transition-colors"
+            <div className="mt-4 flex flex-col gap-2">
+              <div className="flex items-center gap-3 flex-wrap">
+                <StatusBadge status={lead.status} />
+                <select
+                  value={lead.status}
+                  onChange={(e) => handleStatusChange(e.target.value as LeadStatus)}
+                  disabled={statusChanging}
+                  className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2.5 py-1 text-xs outline-none focus:border-[#C7F56F] cursor-pointer disabled:opacity-60"
                 >
-                  <ExternalLink size={11} />
-                  Indeed
-                </a>
+                  {STATUS_OPTIONS.map((s) => (
+                    <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+                  ))}
+                </select>
+                {statusChanging && (
+                  <Loader2 size={13} className="animate-spin text-gray-400" />
+                )}
+                {lead.url && (
+                  <a
+                    href={lead.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 px-2.5 py-1 text-xs text-gray-600 dark:text-gray-300 hover:border-[#C7F56F] transition-colors"
+                  >
+                    <ExternalLink size={11} />
+                    Indeed
+                  </a>
+                )}
+              </div>
+              {statusError && (
+                <p className="text-xs text-red-500">{statusError}</p>
               )}
             </div>
           </div>

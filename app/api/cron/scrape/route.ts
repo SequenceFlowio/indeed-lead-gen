@@ -39,6 +39,14 @@ export async function GET(request: Request) {
     }
   }
 
+  // Delete rejected leads older than 24 hours
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  await supabase
+    .from("leads")
+    .delete()
+    .eq("status", "rejected")
+    .lt("rejected_at", cutoff);
+
   // Trigger scrape via internal call
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const res = await fetch(`${baseUrl}/api/scrape`, { method: "POST" });
