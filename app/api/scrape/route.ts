@@ -80,7 +80,7 @@ export async function POST() {
           location: "Nederland",
           limit: limitPerQuery,
         }),
-        signal: AbortSignal.timeout(30000),
+        signal: AbortSignal.timeout(120000),
       });
 
       if (!res.ok) {
