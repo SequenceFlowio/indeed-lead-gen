@@ -127,37 +127,31 @@ export async function findContactEmail(
   company: string,
   location: string | null
 ): Promise<ContactEmailResult> {
-  const systemPrompt = `Je bent een expert in het vinden van zakelijke contactgegevens voor Nederlandse bedrijven.
+  const input = `Zoek het zakelijke e-mailadres voor het Nederlandse bedrijf "${company}" (locatie: ${location ?? "Nederland"}).
 
-Zoek het meest relevante zakelijke e-mailadres voor het gegeven bedrijf.
-Prioriteit: directe manager/eigenaar > info@/contact@ > ander zakelijk e-mailadres.
+Prioriteit: directe contactpersoon/manager/eigenaar > info@ > contact@ > ander zakelijk e-mailadres.
+Zoek op de website van het bedrijf, LinkedIn, KVK, of andere openbare bronnen.
 
-Geef ALLEEN een JSON-object terug:
-{
-  "email": <e-mailadres als string, of null als niet gevonden>,
-  "confidence": <"high" | "medium" | "low" | "none">,
-  "source": <korte beschrijving van waar je het vandaan hebt>
-}
+Geef je antwoord ALLEEN als JSON-object, zonder extra tekst:
+{"email": "gevonden@email.com of null als niet gevonden", "confidence": "high of medium of low of none", "source": "korte beschrijving van de bron"}`;
 
-Als je het e-mailadres niet kunt vinden, geef dan null terug voor email en "none" voor confidence.`;
+  try {
+    const response = await getOpenAI().responses.create({
+      model: "gpt-4o-mini-search-preview",
+      tools: [{ type: "web_search_preview" as "web_search_preview" }],
+      input,
+    });
 
-  const userPrompt = `Bedrijf: ${company}
-Locatie: ${location ?? "Nederland"}
+    // Extract text from response output
+    const text = response.output_text ?? "";
 
-Vind het zakelijke e-mailadres voor dit Nederlandse bedrijf.`;
-
-  const response = await getOpenAI().chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
-    ],
-    temperature: 0.1,
-    response_format: { type: "json_object" },
-  });
-
-  const content = response.choices[0].message.content ?? "{}";
-  return JSON.parse(content) as ContactEmailResult;
+    // Parse JSON from the response text
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return { email: null, confidence: "none", source: "Geen resultaat" };
+    return JSON.parse(jsonMatch[0]) as ContactEmailResult;
+  } catch {
+    return { email: null, confidence: "none", source: "Zoekopdracht mislukt" };
+  }
 }
 
 function isValidEmail(email: string): boolean {
