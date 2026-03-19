@@ -27,6 +27,8 @@ const STATUS_LABELS: Record<LeadStatus, string> = {
   email_ready: "Email klaar",
   sent: "Verzonden",
   rejected: "Afgewezen",
+  bounced_hard: "Hard bounce",
+  bounced_soft: "Soft bounce",
 };
 
 export default function LeadDetailPage() {

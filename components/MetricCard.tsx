@@ -6,14 +6,17 @@ interface MetricCardProps {
   value: number | string;
   icon: LucideIcon;
   accent?: boolean;
+  danger?: boolean;
   delta?: string;
 }
 
-export default function MetricCard({ label, value, icon: Icon, accent, delta }: MetricCardProps) {
+export default function MetricCard({ label, value, icon: Icon, accent, danger, delta }: MetricCardProps) {
   return (
     <div className={cn(
       "rounded-xl border p-5 flex flex-col gap-3",
-      accent
+      danger
+        ? "border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10"
+        : accent
         ? "border-[#C7F56F]/40 bg-[#C7F56F]/5 dark:bg-[#C7F56F]/5"
         : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
     )}>
@@ -23,7 +26,9 @@ export default function MetricCard({ label, value, icon: Icon, accent, delta }: 
         </span>
         <div className={cn(
           "rounded-lg p-1.5",
-          accent
+          danger
+            ? "bg-red-100 dark:bg-red-900/30 text-red-500 dark:text-red-400"
+            : accent
             ? "bg-[#C7F56F]/20 text-[#1a1a1a] dark:text-[#C7F56F]"
             : "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500"
         )}>
@@ -33,7 +38,7 @@ export default function MetricCard({ label, value, icon: Icon, accent, delta }: 
       <div className="flex items-end gap-2">
         <span className={cn(
           "text-3xl font-bold tabular-nums",
-          accent ? "text-gray-900 dark:text-white" : "text-gray-900 dark:text-white"
+          danger ? "text-red-600 dark:text-red-400" : "text-gray-900 dark:text-white"
         )}>
           {value}
         </span>

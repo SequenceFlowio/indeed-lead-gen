@@ -1,18 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Moon, Sun, LogOut } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const NAV_LINKS = [
+  { href: "/", label: "Dashboard" },
+  { href: "/emails", label: "E-mails" },
+  { href: "/bounces", label: "Bounces" },
+  { href: "/settings", label: "Instellingen" },
+];
 
 export default function Header() {
   const [isDark, setIsDark] = useState(false);
   const [firstName, setFirstName] = useState("");
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
-    // Init theme from localStorage
     const stored = localStorage.getItem("theme");
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const dark = stored === "dark" || (!stored && prefersDark);
@@ -44,14 +53,14 @@ export default function Header() {
   }
 
   return (
-    <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-[#111] px-6 py-3 sticky top-0 z-40">
-      <div className="mx-auto flex max-w-6xl items-center justify-between">
+    <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-[#111] sticky top-0 z-40">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
         {/* Logo */}
         <a
           href="https://getsequenceflow.nl"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-3"
+          className="flex items-center gap-3 flex-shrink-0"
         >
           <Image
             src={isDark ? "/logo-wit.png" : "/logo-zwart.png"}
@@ -61,14 +70,33 @@ export default function Header() {
             className="h-8 w-auto object-contain"
             priority
           />
-          <span className="text-xs text-gray-400 dark:text-gray-500 font-normal hidden sm:inline">
-            Leads
-          </span>
         </a>
+
+        {/* Nav links */}
+        <nav className="hidden md:flex items-center gap-1">
+          {NAV_LINKS.map((link) => {
+            const isActive = link.href === "/"
+              ? pathname === "/"
+              : pathname.startsWith(link.href);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={cn(
+                  "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+                  isActive
+                    ? "bg-[#C7F56F] text-[#1a1a1a]"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800"
+                )}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
+        </nav>
 
         {/* Right controls */}
         <div className="flex items-center gap-2">
-          {/* Theme toggle */}
           <button
             onClick={toggleTheme}
             className="flex items-center gap-1.5 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -78,14 +106,12 @@ export default function Header() {
             <span className="hidden sm:inline">{isDark ? "Licht" : "Donker"}</span>
           </button>
 
-          {/* Greeting */}
           {firstName && (
             <span className="hidden sm:block text-xs text-gray-500 dark:text-gray-400 px-1">
               Hoi, {firstName}
             </span>
           )}
 
-          {/* Sign out */}
           <button
             onClick={handleSignOut}
             className="flex items-center gap-1.5 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"

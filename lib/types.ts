@@ -1,4 +1,12 @@
-export type LeadStatus = "new" | "qualified" | "email_ready" | "sent" | "rejected";
+export type LeadStatus =
+  | "new"
+  | "qualified"
+  | "email_ready"
+  | "sent"
+  | "rejected"
+  | "bounced_hard"
+  | "bounced_soft";
+
 export type LeadTier = "hot" | "warm" | "cold";
 
 export interface Lead {
@@ -33,6 +41,9 @@ export interface Lead {
   email_confidence: string | null;
   email_sent_at: string | null;
   followup_sent_at: string | null;
+  sent_from_email: string | null;
+  bounce_type: "hard" | "soft" | null;
+  bounced_at: string | null;
   // Metadata
   scraped_at: string;
   created_at: string;
@@ -51,9 +62,42 @@ export interface SearchQuery {
   created_at: string;
 }
 
+export interface EmailAccount {
+  id: string;
+  name: string;
+  from_name: string;
+  from_email: string;
+  smtp_host: string;
+  smtp_port: number;
+  smtp_user: string;
+  smtp_pass: string;
+  active: boolean;
+  sent_count: number;
+  last_used_at: string | null;
+  created_at: string;
+}
+
+export interface Bounce {
+  id: string;
+  lead_id: string | null;
+  email: string;
+  bounce_type: "hard" | "soft";
+  reason: string | null;
+  bounced_at: string;
+  // joined
+  company?: string | null;
+}
+
 export interface DashboardMetrics {
   leadsToday: number;
   qualified: number;
   emailReady: number;
   sent: number;
+  bounceRate: number;
+}
+
+export interface ScrapeResult {
+  scraped: number;
+  inserted: number;
+  skipped: number;
 }

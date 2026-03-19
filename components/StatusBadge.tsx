@@ -22,6 +22,14 @@ const config: Record<LeadStatus, { label: string; classes: string }> = {
     label: "Afgewezen",
     classes: "bg-red-50 text-red-500 dark:bg-red-900/20 dark:text-red-400",
   },
+  bounced_hard: {
+    label: "Hard bounce",
+    classes: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+  },
+  bounced_soft: {
+    label: "Soft bounce",
+    classes: "bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400",
+  },
 };
 
 export default function StatusBadge({ status }: { status: LeadStatus }) {
