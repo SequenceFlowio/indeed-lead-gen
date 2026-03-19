@@ -54,7 +54,7 @@ jobs:
         uses: wlixcc/SFTP-Deploy-Action@v1.2.4
         with:
           server: 147.79.96.85
-          username: u622361615.sequenceflow
+          username: u622361615.outreach.sequenceflow.io
           password: ${{ secrets.FTP_PASSWORD }}
           local_path: ./deploy/*
           remote_path: /home/u622361615/domains/outreach.sequenceflow.io/public_html
