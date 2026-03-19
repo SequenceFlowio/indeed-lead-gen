@@ -65,9 +65,9 @@ export default function Header() {
           <Image
             src={isDark ? "/logo-wit.png" : "/logo-zwart.png"}
             alt="SequenceFlow"
-            height={32}
-            width={160}
-            className="h-8 w-auto object-contain"
+            height={96}
+            width={480}
+            className="h-24 w-auto object-contain"
             priority
           />
         </a>

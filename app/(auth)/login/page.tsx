@@ -90,9 +90,9 @@ function LoginContent() {
             <Image
               src="/logo-zwart.png"
               alt="SequenceFlow"
-              height={28}
-              width={140}
-              className="h-7 w-auto object-contain"
+              height={84}
+              width={420}
+              className="h-[84px] w-auto object-contain"
               priority
             />
           </div>
