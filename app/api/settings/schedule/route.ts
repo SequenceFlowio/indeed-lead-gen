@@ -5,7 +5,13 @@ export async function GET() {
   const supabase = await createClient();
   const { data } = await supabase.from("settings").select("key, value").in("key", ["scrape_schedule", "next_scrape_at"]);
   const kv = Object.fromEntries((data ?? []).map((r: { key: string; value: string }) => [r.key, r.value]));
-  return NextResponse.json({ schedule: kv["scrape_schedule"] ?? "off", next_scrape_at: kv["next_scrape_at"] ?? null });
+  const schedule = kv["scrape_schedule"] ?? "off";
+  const rawNext = kv["next_scrape_at"];
+  // Only return next_scrape_at if schedule is active and the timestamp is in the future
+  const next_scrape_at = (schedule !== "off" && rawNext && new Date(rawNext) > new Date())
+    ? rawNext
+    : null;
+  return NextResponse.json({ schedule, next_scrape_at });
 }
 
 export async function POST(request: Request) {
