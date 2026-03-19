@@ -37,6 +37,11 @@ export default function SettingsPage() {
   const [addingQuery, setAddingQuery] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
 
+  // Global error/success banner
+  const [banner, setBanner] = useState<{ type: "error" | "success"; message: string } | null>(null);
+  function showError(msg: string) { setBanner({ type: "error", message: msg }); }
+  function showSuccess(msg: string) { setBanner({ type: "success", message: msg }); setTimeout(() => setBanner(null), 3000); }
+
   // Settings state
   const [minScore, setMinScore] = useState("7");
   const [savingSettings, setSavingSettings] = useState(false);
@@ -69,13 +74,15 @@ export default function SettingsPage() {
   }, []);
 
   async function loadQueries() {
-    const { data } = await createClient().from("search_queries").select("*").order("created_at");
+    const { data, error } = await createClient().from("search_queries").select("*").order("created_at");
+    if (error) showError(`Zoekopdrachten laden mislukt: ${error.message}`);
     setQueries(data ?? []);
     setLoadingQueries(false);
   }
 
   async function loadSettings() {
-    const { data } = await createClient().from("settings").select("*");
+    const { data, error } = await createClient().from("settings").select("*");
+    if (error) showError(`Instellingen laden mislukt: ${error.message}`);
     if (data) {
       const kvMap = Object.fromEntries(data.map((r: { key: string; value: string }) => [r.key, r.value]));
       setMinScore(kvMap["min_score_threshold"] ?? "7");
@@ -107,35 +114,42 @@ export default function SettingsPage() {
 
   async function toggleQuery(id: string, active: boolean) {
     setSavingQuery(id);
-    await createClient().from("search_queries").update({ active }).eq("id", id);
-    setQueries((prev) => prev.map((q) => q.id === id ? { ...q, active } : q));
+    const { error } = await createClient().from("search_queries").update({ active }).eq("id", id);
+    if (error) showError(`Opslaan mislukt: ${error.message}`);
+    else setQueries((prev) => prev.map((q) => q.id === id ? { ...q, active } : q));
     setSavingQuery(null);
   }
 
   async function deleteQuery(id: string) {
-    await createClient().from("search_queries").delete().eq("id", id);
-    setQueries((prev) => prev.filter((q) => q.id !== id));
+    const { error } = await createClient().from("search_queries").delete().eq("id", id);
+    if (error) showError(`Verwijderen mislukt: ${error.message}`);
+    else setQueries((prev) => prev.filter((q) => q.id !== id));
   }
 
   async function addQuery() {
     if (!newQuery.query.trim()) return;
     setAddingQuery(true);
-    const { data } = await createClient().from("search_queries").insert({
+    const { data, error } = await createClient().from("search_queries").insert({
       ...newQuery,
       active: true,
     }).select().single();
-    if (data) setQueries((prev) => [...prev, data]);
-    setNewQuery({ query: "", label: "", flow: "Operations Flow", location: "Netherlands" });
-    setShowAddForm(false);
+    if (error) showError(`Toevoegen mislukt: ${error.message}`);
+    else if (data) {
+      setQueries((prev) => [...prev, data]);
+      setNewQuery({ query: "", label: "", flow: "Operations Flow", location: "Netherlands" });
+      setShowAddForm(false);
+      showSuccess("Zoekopdracht toegevoegd");
+    }
     setAddingQuery(false);
   }
 
   async function seedDefaultQueries() {
-    const { data } = await createClient()
+    const { data, error } = await createClient()
       .from("search_queries")
       .insert(DEFAULT_QUERIES.map((q) => ({ ...q, location: "Netherlands", active: true })))
       .select();
-    if (data) setQueries((prev) => [...prev, ...data]);
+    if (error) showError(`Standaard laden mislukt: ${error.message}`);
+    else if (data) setQueries((prev) => [...prev, ...data]);
   }
 
   async function saveSettings() {
@@ -143,7 +157,9 @@ export default function SettingsPage() {
     const upserts = [
       { key: "min_score_threshold", value: minScore, updated_at: new Date().toISOString() },
     ];
-    await createClient().from("settings").upsert(upserts);
+    const { error } = await createClient().from("settings").upsert(upserts);
+    if (error) showError(`Opslaan mislukt: ${error.message}`);
+    else showSuccess("Instellingen opgeslagen");
     setSavingSettings(false);
   }
 
@@ -212,6 +228,18 @@ export default function SettingsPage() {
 
   return (
     <div className="flex flex-col gap-8">
+      {banner && (
+        <div
+          onClick={() => setBanner(null)}
+          className={`cursor-pointer rounded-xl border px-4 py-3 text-sm ${
+            banner.type === "error"
+              ? "border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400"
+              : "border-[#C7F56F]/40 bg-[#C7F56F]/10 text-[#3a6600] dark:text-[#C7F56F]"
+          }`}
+        >
+          {banner.message}
+        </div>
+      )}
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
           Instellingen
