@@ -14,6 +14,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -32,41 +34,18 @@ jobs:
           SCRAPER_URL: ${{ secrets.SCRAPER_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           WEBSHARE_API_KEY: ${{ secrets.WEBSHARE_API_KEY }}
-        run: npm run build
+        run: npx next build
 
-      - name: Prepare bundle
+      - name: Push prebuilt to hostinger-deploy branch
         run: |
-          mkdir -p deploy/.next
-          cp -r .next/standalone/. deploy/
-          cp -r .next/static deploy/.next/static
-          cp -r public deploy/public
-          cat > deploy/.env.production << EOF
-          NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
-          SCRAPER_URL=${{ secrets.SCRAPER_URL }}
-          CRON_SECRET=${{ secrets.CRON_SECRET }}
-          WEBSHARE_API_KEY=${{ secrets.WEBSHARE_API_KEY }}
-          EOF
-
-      - name: Upload via rsync
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -p 65002 147.79.96.85 >> ~/.ssh/known_hosts
-          rsync -avz --delete -e "ssh -p 65002 -i ~/.ssh/id_ed25519" \
-            ./deploy/ \
-            u622361615@147.79.96.85:/home/u622361615/domains/outreach.sequenceflow.io/nodejs/
-
-      - name: Restart app via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: 147.79.96.85
-          username: u622361615
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 65002
-          script: |
-            mkdir -p /home/u622361615/domains/outreach.sequenceflow.io/nodejs/tmp
-            touch /home/u622361615/domains/outreach.sequenceflow.io/nodejs/tmp/restart.txt
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git checkout -B hostinger-deploy
+          cp .gitignore .gitignore.bak
+          echo '' > .gitignore
+          git add -f .next/standalone/
+          git add -f .next/static/
+          git add package.json next.config.ts
+          mv .gitignore.bak .gitignore
+          git commit -m "Deploy prebuilt [skip ci]"
+          git push origin hostinger-deploy --force
