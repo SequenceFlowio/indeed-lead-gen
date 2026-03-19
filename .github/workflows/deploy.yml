@@ -58,7 +58,7 @@ jobs:
           ssh-keyscan -p 65002 147.79.96.85 >> ~/.ssh/known_hosts
           rsync -avz --delete -e "ssh -p 65002 -i ~/.ssh/id_ed25519" \
             ./deploy/ \
-            u622361615@147.79.96.85:/home/u622361615/domains/outreach.sequenceflow.io/public_html/
+            u622361615@147.79.96.85:/home/u622361615/domains/outreach.sequenceflow.io/nodejs/
 
       - name: Restart app via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -68,7 +68,4 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 65002
           script: |
-            export PATH=/opt/alt/alt-nodejs24/root/usr/bin:$PATH
-            cd /home/u622361615/domains/outreach.sequenceflow.io/public_html
-            kill $(lsof -t -i:3000) 2>/dev/null || true
-            nohup node server.js > app.log 2>&1 &
+            touch /home/u622361615/domains/outreach.sequenceflow.io/nodejs/tmp/restart.txt
