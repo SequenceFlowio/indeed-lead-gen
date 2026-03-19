@@ -68,4 +68,5 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 65002
           script: |
+            mkdir -p /home/u622361615/domains/outreach.sequenceflow.io/nodejs/tmp
             touch /home/u622361615/domains/outreach.sequenceflow.io/nodejs/tmp/restart.txt
