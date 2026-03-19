@@ -36,7 +36,7 @@ jobs:
 
       - name: Prepare bundle
         run: |
-          mkdir -p deploy
+          mkdir -p deploy/.next
           cp -r .next/standalone/. deploy/
           cp -r .next/static deploy/.next/static
           cp -r public deploy/public
@@ -50,18 +50,17 @@ jobs:
           WEBSHARE_API_KEY=${{ secrets.WEBSHARE_API_KEY }}
           EOF
 
-      - name: Deploy via SFTP
-        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
-        with:
-          server: 147.79.96.85
-          username: u622361615
-          password: ${{ secrets.FTP_PASSWORD }}
-          local_path: ./deploy/*
-          remote_path: /home/u622361615/domains/outreach.sequenceflow.io/public_html
-          sftp_only: true
-          port: 65002
+      - name: Upload via rsync
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p 65002 147.79.96.85 >> ~/.ssh/known_hosts
+          rsync -avz --delete -e "ssh -p 65002 -i ~/.ssh/id_ed25519" \
+            ./deploy/ \
+            u622361615@147.79.96.85:/home/u622361615/domains/outreach.sequenceflow.io/public_html/
 
-      - name: Restart Node.js app via SSH
+      - name: Restart app via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: 147.79.96.85
@@ -70,5 +69,5 @@ jobs:
           port: 65002
           script: |
             cd /home/u622361615/domains/outreach.sequenceflow.io/public_html
-            kill $(lsof -t -i:$(cat .port 2>/dev/null || echo 3000)) 2>/dev/null || true
+            kill $(lsof -t -i:3000) 2>/dev/null || true
             nohup node server.js > app.log 2>&1 &
