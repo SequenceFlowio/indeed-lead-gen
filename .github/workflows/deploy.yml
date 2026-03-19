@@ -50,11 +50,11 @@ jobs:
           WEBSHARE_API_KEY=${{ secrets.WEBSHARE_API_KEY }}
           EOF
 
-      - name: Deploy via SFTP
+     - name: Deploy via SFTP
         uses: wlixcc/SFTP-Deploy-Action@v1.2.4
         with:
           server: 147.79.96.85
-          username: u622361615.outreach.sequenceflow.io
+          username: u622361615
           password: ${{ secrets.FTP_PASSWORD }}
           local_path: ./deploy/*
           remote_path: /home/u622361615/domains/outreach.sequenceflow.io/public_html
