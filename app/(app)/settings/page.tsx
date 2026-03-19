@@ -44,6 +44,7 @@ export default function SettingsPage() {
 
   // Settings state
   const [minScore, setMinScore] = useState("7");
+  const [companyBlocklist, setCompanyBlocklist] = useState("");
   const [savingSettings, setSavingSettings] = useState(false);
 
   // Scheduler state
@@ -86,6 +87,7 @@ export default function SettingsPage() {
     if (data) {
       const kvMap = Object.fromEntries(data.map((r: { key: string; value: string }) => [r.key, r.value]));
       setMinScore(kvMap["min_score_threshold"] ?? "7");
+      setCompanyBlocklist(kvMap["company_blocklist"] ?? "");
     }
   }
 
@@ -156,6 +158,7 @@ export default function SettingsPage() {
     setSavingSettings(true);
     const upserts = [
       { key: "min_score_threshold", value: minScore, updated_at: new Date().toISOString() },
+      { key: "company_blocklist", value: companyBlocklist, updated_at: new Date().toISOString() },
     ];
     const { error } = await createClient().from("settings").upsert(upserts);
     if (error) showError(`Opslaan mislukt: ${error.message}`);
@@ -564,25 +567,42 @@ export default function SettingsPage() {
       </section>
 
       {/* AI Settings */}
-      <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6 max-w-sm">
+      <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6 max-w-lg">
         <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
           AI Instellingen
         </h2>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
-            Minimum AI-score voor kwalificatie
-          </label>
-          <input
-            type="number"
-            value={minScore}
-            onChange={(e) => setMinScore(e.target.value)}
-            min="1"
-            max="10"
-            className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30"
-          />
-          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-            Leads met een lagere score worden niet automatisch gekwalificeerd
-          </p>
+        <div className="flex flex-col gap-5">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
+              Minimum AI-score voor kwalificatie
+            </label>
+            <input
+              type="number"
+              value={minScore}
+              onChange={(e) => setMinScore(e.target.value)}
+              min="1"
+              max="10"
+              className="w-32 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30"
+            />
+            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+              Leads met een lagere score worden niet automatisch gekwalificeerd
+            </p>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
+              Bedrijven blokkeren bij scrapen
+            </label>
+            <textarea
+              value={companyBlocklist}
+              onChange={(e) => setCompanyBlocklist(e.target.value)}
+              rows={3}
+              placeholder="bijv. Coolblue, Wehkamp, Picnic"
+              className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30 resize-none"
+            />
+            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+              Kommagescheiden. Grote merken (DHL, PostNL, Albert Heijn, etc.) worden al automatisch geblokkeerd.
+            </p>
+          </div>
         </div>
       </section>
 

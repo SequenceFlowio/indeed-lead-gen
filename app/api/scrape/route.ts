@@ -40,11 +40,23 @@ export async function POST() {
   }
 
   // Dynamic limit calculation based on real Webshare bandwidth + schedule
-  const { data: settings } = await supabase.from("settings").select("key, value").in("key", ["scrape_schedule"]);
+  const { data: settings } = await supabase.from("settings").select("key, value").in("key", ["scrape_schedule", "company_blocklist"]);
   const kvMap = Object.fromEntries((settings ?? []).map((r: { key: string; value: string }) => [r.key, r.value]));
   const scheduleHours = parseInt(kvMap["scrape_schedule"] ?? "24");
   const runsPerMonth = scheduleHours > 0 ? Math.round((30 * 24) / scheduleHours) : 30;
   const KB_PER_RESULT = 150;
+
+  // Company blocklist — case-insensitive partial match
+  const DEFAULT_BLOCKLIST = ["dhl","postnl","dpd","ups","fedex","tnt","albert heijn","jumbo","lidl","aldi","ikea","h&m","bol.com","coolblue","zalando","deloitte","kpmg","pwc","accenture","randstad","adecco","manpower","tempo-team","amazon","action","hema","ah","ahold","heineken","shell","philips","unilever","ns","transdev","arriva","connexxion","gemeente","provincie","rijksoverheid","ministerie","politie","defensie"];
+  const blocklistRaw = kvMap["company_blocklist"] ?? "";
+  const userBlocklist = blocklistRaw ? blocklistRaw.split(",").map((s: string) => s.trim().toLowerCase()).filter(Boolean) : [];
+  const blocklist = [...DEFAULT_BLOCKLIST, ...userBlocklist];
+
+  function isBlocked(company: string | null): boolean {
+    if (!company) return false;
+    const lower = company.toLowerCase();
+    return blocklist.some((term) => lower.includes(term));
+  }
 
   // Try to get real bandwidth data from Webshare
   let budgetMb = 1000; // fallback default
@@ -68,6 +80,7 @@ export async function POST() {
   let totalScraped = 0;
   let totalInserted = 0;
   let totalSkipped = 0;
+  let totalBlocked = 0;
   const errors: string[] = [];
 
   for (const q of queries) {
@@ -91,10 +104,13 @@ export async function POST() {
       const jobs: ScraperJob[] = await res.json();
       if (!Array.isArray(jobs)) continue;
 
-      totalScraped += jobs.length;
+      // Filter out blocked companies before processing
+      const filtered = jobs.filter((job) => !isBlocked(job.company ?? null));
+      totalBlocked += jobs.length - filtered.length;
+      totalScraped += filtered.length;
 
       // Parse jobs — same mapping as WF1 Code: Parse Jobs node
-      const leads = jobs.map((job) => ({
+      const leads = filtered.map((job) => ({
         job_id: job.id ?? job.job_id ?? null,
         title: job.positionName ?? job.title ?? null,
         company: job.company ?? null,
@@ -146,6 +162,7 @@ export async function POST() {
     scraped: totalScraped,
     inserted: totalInserted,
     skipped: totalSkipped,
+    blocked: totalBlocked,
     queries: queries.length,
     limit_per_query: limitPerQuery,
     errors: errors.length > 0 ? errors : undefined,

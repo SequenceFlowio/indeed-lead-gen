@@ -18,7 +18,7 @@ export default function DashboardPage() {
   });
   const [loading, setLoading] = useState(true);
   const [scraping, setScraping] = useState(false);
-  const [scrapeResult, setScrapeResult] = useState<{ inserted?: number; scraped?: number; queries?: number; limitPerQuery?: number; errors?: string[]; error?: string } | null>(null);
+  const [scrapeResult, setScrapeResult] = useState<{ inserted?: number; scraped?: number; blocked?: number; queries?: number; limitPerQuery?: number; errors?: string[]; error?: string } | null>(null);
   const [bounceRate, setBounceRate] = useState(0);
   const [nextScrapeAt, setNextScrapeAt] = useState<string | null>(null);
 
@@ -76,7 +76,7 @@ export default function DashboardPage() {
       const res = await fetch("/api/scrape", { method: "POST" });
       const data = await res.json();
       if (res.ok) {
-        setScrapeResult({ inserted: data.inserted, scraped: data.scraped, queries: data.queries, limitPerQuery: data.limit_per_query, errors: data.errors });
+        setScrapeResult({ inserted: data.inserted, scraped: data.scraped, blocked: data.blocked, queries: data.queries, limitPerQuery: data.limit_per_query, errors: data.errors });
         await fetchData();
         await fetchNextScrape();
       } else {
@@ -161,7 +161,7 @@ export default function DashboardPage() {
             `Fout: ${scrapeResult.error}`
           ) : (
             <div className="flex flex-col gap-1">
-              <span>{scrapeResult.inserted} nieuw van {scrapeResult.scraped} gevonden ({scrapeResult.queries} zoekopdrachten, max {scrapeResult.limitPerQuery}/stuk)</span>
+              <span>{scrapeResult.inserted} nieuw van {scrapeResult.scraped} gevonden ({scrapeResult.queries} zoekopdrachten, max {scrapeResult.limitPerQuery}/stuk{(scrapeResult.blocked ?? 0) > 0 ? `, ${scrapeResult.blocked} geblokkeerd` : ""})</span>
               {scrapeResult.errors && scrapeResult.errors.map((e, i) => (
                 <span key={i} className="text-orange-600 dark:text-orange-400">{e}</span>
               ))}
