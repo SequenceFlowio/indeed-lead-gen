@@ -45,6 +45,7 @@ export default function SettingsPage() {
   const [schedule, setSchedule] = useState("off");
   const [nextScrapeAt, setNextScrapeAt] = useState<string | null>(null);
   const [savingSchedule, setSavingSchedule] = useState(false);
+  const [bandwidthBudget, setBandwidthBudget] = useState("1000");
 
   // Email accounts state
   const [emailAccounts, setEmailAccounts] = useState<EmailAccount[]>([]);
@@ -74,6 +75,7 @@ export default function SettingsPage() {
     if (data) {
       const kvMap = Object.fromEntries(data.map((r: { key: string; value: string }) => [r.key, r.value]));
       setMinScore(kvMap["min_score_threshold"] ?? "7");
+      setBandwidthBudget(kvMap["bandwidth_budget_mb"] ?? "1000");
     }
   }
 
@@ -132,9 +134,21 @@ export default function SettingsPage() {
     setSavingSettings(true);
     const upserts = [
       { key: "min_score_threshold", value: minScore, updated_at: new Date().toISOString() },
+      { key: "bandwidth_budget_mb", value: bandwidthBudget, updated_at: new Date().toISOString() },
     ];
     await createClient().from("settings").upsert(upserts);
     setSavingSettings(false);
+  }
+
+  function calcBandwidth() {
+    const budget = parseFloat(bandwidthBudget) || 1000;
+    const schedHours = parseInt(schedule) || 0;
+    const activeCount = queries.filter((q) => q.active).length || 14;
+    if (schedHours === 0) return null;
+    const runsPerMonth = Math.round((30 * 24) / schedHours);
+    const limitPerQuery = Math.max(1, Math.min(50, Math.floor((budget * 1000) / (runsPerMonth * activeCount * 150))));
+    const usageMb = Math.round(runsPerMonth * activeCount * limitPerQuery * 150 / 1000);
+    return { runsPerMonth, limitPerQuery, usageMb, budget };
   }
 
   async function saveSchedule(value: string) {
@@ -222,11 +236,45 @@ export default function SettingsPage() {
           ))}
           {savingSchedule && <Loader2 size={14} className="animate-spin text-gray-400" />}
         </div>
-        {nextScrapeAt && schedule !== "off" && (
+          {nextScrapeAt && schedule !== "off" && (
           <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">
             Volgende scrape: {formatNextScrape(nextScrapeAt)}
           </p>
         )}
+
+        {/* Bandwidth budget */}
+        <div className="mt-5 border-t border-gray-100 dark:border-gray-800 pt-5">
+          <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
+            Proxy bandwidth budget (MB/maand)
+          </label>
+          <input
+            type="number"
+            value={bandwidthBudget}
+            onChange={(e) => setBandwidthBudget(e.target.value)}
+            min="100"
+            step="100"
+            className="w-40 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30"
+          />
+          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">Webshare limiet is 1000 MB. Pas aan als je upgradet.</p>
+
+          {(() => {
+            const est = calcBandwidth();
+            if (!est) return (
+              <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">Zet een schema aan om het verbruik te berekenen.</p>
+            );
+            const over = est.usageMb > est.budget;
+            return (
+              <div className={`mt-3 rounded-lg px-3 py-2.5 text-xs ${over ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800" : "bg-[#C7F56F]/10 text-[#3a6600] dark:text-[#C7F56F] border border-[#C7F56F]/30"}`}>
+                <div className="font-semibold mb-1">{over ? "⚠ Budget overschreden" : "✓ Binnen budget"}</div>
+                <div className="flex flex-col gap-0.5 opacity-90">
+                  <span>{est.runsPerMonth} scrapes/maand × {queries.filter(q => q.active).length || 14} actieve zoekopdrachten</span>
+                  <span>→ <strong>{est.limitPerQuery} resultaten per zoekopdracht</strong> (automatisch berekend)</span>
+                  <span>→ Geschat verbruik: <strong>{est.usageMb} MB / {est.budget} MB</strong></span>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
       </section>
 
       {/* Email accounts */}

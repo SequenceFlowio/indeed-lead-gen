@@ -39,6 +39,15 @@ export async function POST() {
     );
   }
 
+  // Dynamic limit calculation based on bandwidth budget
+  const { data: settings } = await supabase.from("settings").select("key, value").in("key", ["bandwidth_budget_mb", "scrape_schedule"]);
+  const kvMap = Object.fromEntries((settings ?? []).map((r: { key: string; value: string }) => [r.key, r.value]));
+  const budgetMb = parseFloat(kvMap["bandwidth_budget_mb"] ?? "1000");
+  const scheduleHours = parseInt(kvMap["scrape_schedule"] ?? "24");
+  const runsPerMonth = scheduleHours > 0 ? Math.round((30 * 24) / scheduleHours) : 30;
+  const KB_PER_RESULT = 150;
+  const limitPerQuery = Math.max(1, Math.min(50, Math.floor((budgetMb * 1000) / (runsPerMonth * queries.length * KB_PER_RESULT))));
+
   let totalScraped = 0;
   let totalInserted = 0;
   let totalSkipped = 0;
@@ -52,7 +61,7 @@ export async function POST() {
         body: JSON.stringify({
           query: q.query,
           location: "Nederland",
-          limit: 10,
+          limit: limitPerQuery,
         }),
         signal: AbortSignal.timeout(30000),
       });
@@ -106,13 +115,6 @@ export async function POST() {
   }
 
   // Update next_scrape_at based on schedule
-  const { data: scheduleSetting } = await supabase
-    .from("settings")
-    .select("value")
-    .eq("key", "scrape_schedule")
-    .single();
-
-  const scheduleHours = parseInt(scheduleSetting?.value ?? "0");
   if (scheduleHours > 0) {
     const nextScrape = new Date();
     nextScrape.setHours(nextScrape.getHours() + scheduleHours);
@@ -128,6 +130,7 @@ export async function POST() {
     inserted: totalInserted,
     skipped: totalSkipped,
     queries: queries.length,
+    limit_per_query: limitPerQuery,
     errors: errors.length > 0 ? errors : undefined,
   });
 }
