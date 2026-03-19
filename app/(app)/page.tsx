@@ -117,7 +117,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
-            Dashboard
+            Dashboard <span className="text-[#C7F56F]">TEST</span>
           </h1>
           <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
             Overzicht van uw lead generation pipeline
