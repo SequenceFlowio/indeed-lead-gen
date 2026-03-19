@@ -60,3 +60,15 @@ jobs:
           remote_path: /home/u622361615/domains/outreach.sequenceflow.io/public_html
           sftp_only: true
           port: 65002
+
+      - name: Restart Node.js app via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 147.79.96.85
+          username: u622361615
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 65002
+          script: |
+            cd /home/u622361615/domains/outreach.sequenceflow.io/public_html
+            kill $(lsof -t -i:$(cat .port 2>/dev/null || echo 3000)) 2>/dev/null || true
+            nohup node server.js > app.log 2>&1 &
