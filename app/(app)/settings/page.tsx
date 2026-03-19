@@ -45,7 +45,10 @@ export default function SettingsPage() {
   const [schedule, setSchedule] = useState("off");
   const [nextScrapeAt, setNextScrapeAt] = useState<string | null>(null);
   const [savingSchedule, setSavingSchedule] = useState(false);
-  const [bandwidthBudget, setBandwidthBudget] = useState("1000");
+
+  // Webshare bandwidth
+  interface WebshareStats { used_mb: number; limit_mb: number | null; remaining_mb: number | null; usage_percent: number | null; reset_date: string; unlimited: boolean; error?: string; }
+  const [webshare, setWebshare] = useState<WebshareStats | null>(null);
 
   // Email accounts state
   const [emailAccounts, setEmailAccounts] = useState<EmailAccount[]>([]);
@@ -62,6 +65,7 @@ export default function SettingsPage() {
     loadSettings();
     loadSchedule();
     loadEmailAccounts();
+    loadWebshare();
   }, []);
 
   async function loadQueries() {
@@ -75,7 +79,6 @@ export default function SettingsPage() {
     if (data) {
       const kvMap = Object.fromEntries(data.map((r: { key: string; value: string }) => [r.key, r.value]));
       setMinScore(kvMap["min_score_threshold"] ?? "7");
-      setBandwidthBudget(kvMap["bandwidth_budget_mb"] ?? "1000");
     }
   }
 
@@ -86,6 +89,11 @@ export default function SettingsPage() {
       setSchedule(data.schedule ?? "off");
       setNextScrapeAt(data.next_scrape_at ?? null);
     }
+  }
+
+  async function loadWebshare() {
+    const res = await fetch("/api/webshare/stats");
+    if (res.ok) setWebshare(await res.json());
   }
 
   async function loadEmailAccounts() {
@@ -134,21 +142,20 @@ export default function SettingsPage() {
     setSavingSettings(true);
     const upserts = [
       { key: "min_score_threshold", value: minScore, updated_at: new Date().toISOString() },
-      { key: "bandwidth_budget_mb", value: bandwidthBudget, updated_at: new Date().toISOString() },
     ];
     await createClient().from("settings").upsert(upserts);
     setSavingSettings(false);
   }
 
-  function calcBandwidth() {
-    const budget = parseFloat(bandwidthBudget) || 1000;
+  function calcEstimate() {
     const schedHours = parseInt(schedule) || 0;
     const activeCount = queries.filter((q) => q.active).length || 14;
-    if (schedHours === 0) return null;
+    if (schedHours === 0 || !webshare || webshare.unlimited) return null;
+    const budgetMb = webshare.remaining_mb ?? webshare.limit_mb ?? 1000;
     const runsPerMonth = Math.round((30 * 24) / schedHours);
-    const limitPerQuery = Math.max(1, Math.min(50, Math.floor((budget * 1000) / (runsPerMonth * activeCount * 150))));
+    const limitPerQuery = Math.max(1, Math.min(50, Math.floor((budgetMb * 1000) / (runsPerMonth * activeCount * 150))));
     const usageMb = Math.round(runsPerMonth * activeCount * limitPerQuery * 150 / 1000);
-    return { runsPerMonth, limitPerQuery, usageMb, budget };
+    return { runsPerMonth, limitPerQuery, usageMb };
   }
 
   async function saveSchedule(value: string) {
@@ -242,38 +249,44 @@ export default function SettingsPage() {
           </p>
         )}
 
-        {/* Bandwidth budget */}
+        {/* Webshare bandwidth */}
         <div className="mt-5 border-t border-gray-100 dark:border-gray-800 pt-5">
-          <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
-            Proxy bandwidth budget (MB/maand)
-          </label>
-          <input
-            type="number"
-            value={bandwidthBudget}
-            onChange={(e) => setBandwidthBudget(e.target.value)}
-            min="100"
-            step="100"
-            className="w-40 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30"
-          />
-          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">Webshare limiet is 1000 MB. Pas aan als je upgradet.</p>
-
-          {(() => {
-            const est = calcBandwidth();
-            if (!est) return (
-              <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">Zet een schema aan om het verbruik te berekenen.</p>
-            );
-            const over = est.usageMb > est.budget;
-            return (
-              <div className={`mt-3 rounded-lg px-3 py-2.5 text-xs ${over ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800" : "bg-[#C7F56F]/10 text-[#3a6600] dark:text-[#C7F56F] border border-[#C7F56F]/30"}`}>
-                <div className="font-semibold mb-1">{over ? "⚠ Budget overschreden" : "✓ Binnen budget"}</div>
-                <div className="flex flex-col gap-0.5 opacity-90">
-                  <span>{est.runsPerMonth} scrapes/maand × {queries.filter(q => q.active).length || 14} actieve zoekopdrachten</span>
-                  <span>→ <strong>{est.limitPerQuery} resultaten per zoekopdracht</strong> (automatisch berekend)</span>
-                  <span>→ Geschat verbruik: <strong>{est.usageMb} MB / {est.budget} MB</strong></span>
-                </div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Webshare bandbreedte</p>
+          {!webshare ? (
+            <p className="text-xs text-gray-400 dark:text-gray-500">Niet gekoppeld — voeg <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">WEBSHARE_API_KEY</code> toe aan je omgevingsvariabelen.</p>
+          ) : webshare.error ? (
+            <p className="text-xs text-red-500">{webshare.error}</p>
+          ) : webshare.unlimited ? (
+            <p className="text-xs text-[#3a6600] dark:text-[#C7F56F]">Onbeperkt — geen bandbreedtelimiet.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                <span>{webshare.used_mb.toLocaleString()} MB gebruikt</span>
+                <span>{webshare.limit_mb?.toLocaleString()} MB totaal</span>
               </div>
-            );
-          })()}
+              <div className="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${(webshare.usage_percent ?? 0) >= 90 ? "bg-red-500" : (webshare.usage_percent ?? 0) >= 70 ? "bg-orange-400" : "bg-[#C7F56F]"}`}
+                  style={{ width: `${webshare.usage_percent ?? 0}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
+                <span>{webshare.remaining_mb?.toLocaleString()} MB resterend</span>
+                <span>Reset: {new Date(webshare.reset_date).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}</span>
+              </div>
+              {(() => {
+                const est = calcEstimate();
+                if (!est) return null;
+                const over = est.usageMb > (webshare.remaining_mb ?? 0);
+                return (
+                  <div className={`mt-1 rounded-lg px-3 py-2 text-xs ${over ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800" : "bg-[#C7F56F]/10 text-[#3a6600] dark:text-[#C7F56F] border border-[#C7F56F]/30"}`}>
+                    <div className="font-semibold mb-0.5">{over ? "Limiet wordt overschreden" : "Binnen budget"}</div>
+                    <span>{est.runsPerMonth} scrapes/maand · {est.limitPerQuery} resultaten/zoekopdracht · ~{est.usageMb} MB/maand</span>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
         </div>
       </section>
 

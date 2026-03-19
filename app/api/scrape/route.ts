@@ -39,13 +39,30 @@ export async function POST() {
     );
   }
 
-  // Dynamic limit calculation based on bandwidth budget
-  const { data: settings } = await supabase.from("settings").select("key, value").in("key", ["bandwidth_budget_mb", "scrape_schedule"]);
+  // Dynamic limit calculation based on real Webshare bandwidth + schedule
+  const { data: settings } = await supabase.from("settings").select("key, value").in("key", ["scrape_schedule"]);
   const kvMap = Object.fromEntries((settings ?? []).map((r: { key: string; value: string }) => [r.key, r.value]));
-  const budgetMb = parseFloat(kvMap["bandwidth_budget_mb"] ?? "1000");
   const scheduleHours = parseInt(kvMap["scrape_schedule"] ?? "24");
   const runsPerMonth = scheduleHours > 0 ? Math.round((30 * 24) / scheduleHours) : 30;
   const KB_PER_RESULT = 150;
+
+  // Try to get real bandwidth data from Webshare
+  let budgetMb = 1000; // fallback default
+  try {
+    const wsRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/webshare/stats`);
+    if (wsRes.ok) {
+      const ws = await wsRes.json();
+      if (ws.unlimited) {
+        budgetMb = 999999;
+      } else if (ws.limit_mb) {
+        // Use remaining bandwidth for this billing period to avoid overage
+        budgetMb = ws.remaining_mb ?? ws.limit_mb;
+      }
+    }
+  } catch {
+    // Webshare API unavailable — use fallback
+  }
+
   const limitPerQuery = Math.max(1, Math.min(50, Math.floor((budgetMb * 1000) / (runsPerMonth * queries.length * KB_PER_RESULT))));
 
   let totalScraped = 0;
