@@ -153,8 +153,8 @@ Geef je antwoord ALLEEN als JSON-object, zonder extra tekst:
       for (const item of response.output) {
         if (item.type === "message" && Array.isArray(item.content)) {
           for (const block of item.content) {
-            if (block.type === "output_text" || block.type === "text") {
-              text += (block as { text: string }).text ?? "";
+            if (block.type === "output_text") {
+              text += block.text ?? "";
             }
           }
         }
