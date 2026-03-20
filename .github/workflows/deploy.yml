@@ -57,13 +57,22 @@ jobs:
           username: u622361615
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 65002
+          envs: NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,OPENAI_API_KEY,SCRAPER_URL,CRON_SECRET,WEBSHARE_API_KEY
           script: |
-            cat > /home/u622361615/domains/outreach.sequenceflow.io/nodejs/.env.production << 'EOF'
-            NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-            NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-            SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
-            SCRAPER_URL=${{ secrets.SCRAPER_URL }}
-            CRON_SECRET=${{ secrets.CRON_SECRET }}
-            WEBSHARE_API_KEY=${{ secrets.WEBSHARE_API_KEY }}
+            cat > /home/u622361615/domains/outreach.sequenceflow.io/nodejs/.env.production << EOF
+            NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+            SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY
+            OPENAI_API_KEY=$OPENAI_API_KEY
+            SCRAPER_URL=$SCRAPER_URL
+            CRON_SECRET=$CRON_SECRET
+            WEBSHARE_API_KEY=$WEBSHARE_API_KEY
             EOF
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SCRAPER_URL: ${{ secrets.SCRAPER_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          WEBSHARE_API_KEY: ${{ secrets.WEBSHARE_API_KEY }}
