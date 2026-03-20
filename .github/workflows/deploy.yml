@@ -49,3 +49,21 @@ jobs:
           mv .gitignore.bak .gitignore
           git commit -m "Deploy prebuilt [skip ci]"
           git push origin hostinger-deploy --force
+
+      - name: Write env file via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 147.79.96.85
+          username: u622361615
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 65002
+          script: |
+            cat > /home/u622361615/domains/outreach.sequenceflow.io/nodejs/.env.production << 'EOF'
+            NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+            SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+            SCRAPER_URL=${{ secrets.SCRAPER_URL }}
+            CRON_SECRET=${{ secrets.CRON_SECRET }}
+            WEBSHARE_API_KEY=${{ secrets.WEBSHARE_API_KEY }}
+            EOF
