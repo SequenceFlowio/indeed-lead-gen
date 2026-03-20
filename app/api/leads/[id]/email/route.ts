@@ -16,9 +16,26 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ error: "Lead not found" }, { status: 404 });
   }
 
+  // Check for active SMTP account before generating
+  const { data: accounts } = await supabase
+    .from("email_accounts")
+    .select("id, from_name, from_email, last_used_at, sent_count")
+    .eq("active", true)
+    .order("last_used_at", { ascending: true, nullsFirst: true })
+    .limit(1);
+
+  if (!accounts || accounts.length === 0) {
+    return NextResponse.json(
+      { error: "Verbind eerst een SMTP-account in de instellingen voordat je e-mails genereert." },
+      { status: 400 }
+    );
+  }
+
+  const account = accounts[0];
+
   try {
-    // Step 1: Generate email
-    const emailResult = await generateEmail(lead);
+    // Step 1: Generate email using the sender's name/email
+    const emailResult = await generateEmail(lead, account.from_name, account.from_email);
 
     // Step 2: Find contact email
     const contactResult = await findContactEmail(

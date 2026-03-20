@@ -52,6 +52,10 @@ export default function SettingsPage() {
   const [nextScrapeAt, setNextScrapeAt] = useState<string | null>(null);
   const [savingSchedule, setSavingSchedule] = useState(false);
 
+  // Auto-mode state
+  const [autoMode, setAutoMode] = useState("off");
+  const [savingAutoMode, setSavingAutoMode] = useState(false);
+
   // Webshare bandwidth
   interface WebshareStats { used_mb: number; limit_mb: number | null; remaining_mb: number | null; usage_percent: number | null; reset_date: string; unlimited: boolean; error?: string; }
   const [webshare, setWebshare] = useState<WebshareStats | null>(null);
@@ -72,6 +76,7 @@ export default function SettingsPage() {
     loadSchedule();
     loadEmailAccounts();
     loadWebshare();
+    loadAutoMode();
   }, []);
 
   async function loadQueries() {
@@ -98,6 +103,18 @@ export default function SettingsPage() {
       setSchedule(data.schedule ?? "off");
       setNextScrapeAt(data.next_scrape_at ?? null);
     }
+  }
+
+  async function loadAutoMode() {
+    const { data } = await createClient().from("settings").select("value").eq("key", "auto_mode").single();
+    if (data) setAutoMode(data.value ?? "off");
+  }
+
+  async function saveAutoMode(value: string) {
+    setSavingAutoMode(true);
+    setAutoMode(value);
+    await createClient().from("settings").upsert({ key: "auto_mode", value, updated_at: new Date().toISOString() });
+    setSavingAutoMode(false);
   }
 
   async function loadWebshare() {
@@ -319,6 +336,45 @@ export default function SettingsPage() {
             </div>
           )}
         </div>
+      </section>
+
+      {/* Automatisering */}
+      <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6">
+        <h2 className="mb-1 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+          Automatisering
+        </h2>
+        <p className="mb-4 text-xs text-gray-400 dark:text-gray-500">
+          Wat moet er automatisch gebeuren na elke scrape?
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          {[
+            { value: "off", label: "Handmatig", desc: "Niets automatisch" },
+            { value: "draft", label: "Auto-kwalificeren + concept", desc: "Kwalificeer + maak e-mail concept" },
+            { value: "send", label: "Auto-kwalificeren + verzenden", desc: "Kwalificeer + genereer + stuur direct" },
+          ].map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => saveAutoMode(opt.value)}
+              disabled={savingAutoMode}
+              title={opt.desc}
+              className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                autoMode === opt.value
+                  ? "bg-[#C7F56F] text-[#1a1a1a]"
+                  : "border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+              } disabled:opacity-50`}
+            >
+              {opt.label}
+            </button>
+          ))}
+          {savingAutoMode && <Loader2 size={14} className="animate-spin text-gray-400" />}
+        </div>
+        {autoMode !== "off" && (
+          <p className="mt-3 text-xs text-[#3a6600] dark:text-[#C7F56F]">
+            {autoMode === "draft"
+              ? "Na elke scrape: leads worden automatisch gekwalificeerd en e-mailconcepten aangemaakt."
+              : "Na elke scrape: leads worden automatisch gekwalificeerd, e-mails gegenereerd en direct verzonden."}
+          </p>
+        )}
       </section>
 
       {/* Email accounts */}

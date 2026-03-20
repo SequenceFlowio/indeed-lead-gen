@@ -163,18 +163,25 @@ export default function LeadDetailPage() {
             <div className="mt-4 flex flex-col gap-2">
               <div className="flex items-center gap-3 flex-wrap">
                 <StatusBadge status={lead.status} />
-                <select
-                  value={lead.status}
-                  onChange={(e) => handleStatusChange(e.target.value as LeadStatus)}
-                  disabled={statusChanging}
-                  className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2.5 py-1 text-xs outline-none focus:border-[#C7F56F] cursor-pointer disabled:opacity-60"
-                >
-                  {STATUS_OPTIONS.map((s) => (
-                    <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-                  ))}
-                </select>
-                {statusChanging && (
-                  <Loader2 size={13} className="animate-spin text-gray-400" />
+                {statusChanging && <Loader2 size={13} className="animate-spin text-gray-400" />}
+                {/* Status-aware action buttons */}
+                {lead.status === "rejected" && (
+                  <button
+                    onClick={() => handleStatusChange("new")}
+                    disabled={statusChanging}
+                    className="rounded-lg border border-gray-200 dark:border-gray-700 px-2.5 py-1 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-60"
+                  >
+                    Herstellen
+                  </button>
+                )}
+                {(lead.status === "new" || lead.status === "qualified") && (
+                  <button
+                    onClick={() => handleStatusChange("rejected")}
+                    disabled={statusChanging}
+                    className="rounded-lg border border-red-200 dark:border-red-800 px-2.5 py-1 text-xs text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-60"
+                  >
+                    Afwijzen
+                  </button>
                 )}
                 {lead.url && (
                   <a

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Edit3, Save, Loader2, Mail, AlertCircle, CheckCircle } from "lucide-react";
+import { Edit3, Save, Loader2, Mail, AlertCircle, CheckCircle, Send } from "lucide-react";
 import { Lead } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +17,7 @@ export default function EmailPreview({ lead, onUpdate }: EmailPreviewProps) {
   const [contactEmail, setContactEmail] = useState(lead.contact_email ?? "");
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [sending, setSending] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   function showToast(type: "success" | "error", message: string) {
@@ -28,17 +29,42 @@ export default function EmailPreview({ lead, onUpdate }: EmailPreviewProps) {
     setGenerating(true);
     try {
       const res = await fetch(`/api/leads/${lead.id}/email`, { method: "POST" });
-      if (!res.ok) throw new Error(await res.text());
-      const updated = await res.json();
-      setSubject(updated.draft_subject ?? "");
-      setBody(updated.draft_email ?? "");
-      setContactEmail(updated.contact_email ?? "");
-      onUpdate(updated);
-      showToast("success", "E-mail gegenereerd");
+      const data = await res.json();
+      if (!res.ok) {
+        showToast("error", data.error ?? "Genereren mislukt");
+        return;
+      }
+      setSubject(data.draft_subject ?? "");
+      setBody(data.draft_email ?? "");
+      setContactEmail(data.contact_email ?? "");
+      onUpdate(data);
+      if (!data.contact_email) {
+        showToast("error", "E-mail gegenereerd maar geen contactadres gevonden — vul handmatig in");
+      } else {
+        showToast("success", "E-mail gegenereerd");
+      }
     } catch {
       showToast("error", "Genereren mislukt");
     } finally {
       setGenerating(false);
+    }
+  }
+
+  async function handleSend() {
+    setSending(true);
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/send`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast("error", data.error ?? "Versturen mislukt");
+        return;
+      }
+      onUpdate(data);
+      showToast("success", "E-mail verzonden");
+    } catch {
+      showToast("error", "Versturen mislukt");
+    } finally {
+      setSending(false);
     }
   }
 
@@ -191,32 +217,37 @@ export default function EmailPreview({ lead, onUpdate }: EmailPreviewProps) {
           )}
         </div>
 
-        {/* Signature */}
-        {body && !editing && (
-          <div className="border-t border-gray-100 dark:border-gray-800 pt-3">
-            <p className="text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
-              Met vriendelijke groet,<br />
-              <strong className="text-gray-600 dark:text-gray-300">Noah</strong><br />
-              SequenceFlow · noah@getsequenceflow.nl
-            </p>
+        {/* Actions */}
+        {lead.status !== "sent" && (
+          <div className="flex gap-2 pt-1">
+            <button
+              onClick={handleGenerate}
+              disabled={generating || sending}
+              className="flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+            >
+              {generating ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Mail size={14} />
+              )}
+              {body ? "Opnieuw genereren" : "Genereer e-mail"}
+            </button>
+            {body && contactEmail && (
+              <button
+                onClick={handleSend}
+                disabled={sending || generating}
+                className="flex items-center gap-1.5 rounded-lg bg-[#C7F56F] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] transition-colors disabled:opacity-50"
+              >
+                {sending ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Send size={14} />
+                )}
+                Verstuur
+              </button>
+            )}
           </div>
         )}
-
-        {/* Actions */}
-        <div className="flex gap-2 pt-1">
-          <button
-            onClick={handleGenerate}
-            disabled={generating}
-            className="flex items-center gap-1.5 rounded-lg bg-[#C7F56F] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] transition-colors disabled:opacity-50"
-          >
-            {generating ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <Mail size={14} />
-            )}
-            {body ? "Opnieuw genereren" : "Genereer e-mail"}
-          </button>
-        </div>
       </div>
     </div>
   );

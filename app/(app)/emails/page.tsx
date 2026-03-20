@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Send, Loader2, RefreshCw, ExternalLink } from "lucide-react";
+import { Send, Loader2, RefreshCw, ExternalLink, Mail } from "lucide-react";
 import Link from "next/link";
 import StatusBadge from "@/components/StatusBadge";
 import { Lead } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-type Tab = "email_ready" | "sent";
+type Tab = "qualified" | "email_ready" | "sent";
 
 export default function EmailsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -16,7 +16,8 @@ export default function EmailsPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sending, setSending] = useState<Set<string>>(new Set());
   const [bulkSending, setBulkSending] = useState(false);
-  const [bulkResult, setBulkResult] = useState<{ sent?: number; failed?: number; errors?: { company: string; error: string }[] } | null>(null);
+  const [bulkGenerating, setBulkGenerating] = useState(false);
+  const [bulkResult, setBulkResult] = useState<{ sent?: number; failed?: number; generated?: number; errors?: { company: string; error: string }[] } | null>(null);
 
   const fetchLeads = useCallback(async () => {
     setLoading(true);
@@ -24,7 +25,7 @@ export default function EmailsPage() {
       const res = await fetch("/api/leads");
       if (res.ok) {
         const data: Lead[] = await res.json();
-        setLeads(data.filter((l) => l.status === "email_ready" || l.status === "sent"));
+        setLeads(data.filter((l) => l.status === "qualified" || l.status === "email_ready" || l.status === "sent"));
       }
     } finally {
       setLoading(false);
@@ -106,6 +107,25 @@ export default function EmailsPage() {
     setBulkSending(false);
   }
 
+  async function generateBulk() {
+    const ids = Array.from(selected).filter((id) => leads.find((l) => l.id === id)?.status === "qualified");
+    if (ids.length === 0) return;
+    setBulkGenerating(true);
+    setBulkResult(null);
+    const res = await fetch("/api/emails/generate-bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setBulkResult({ generated: data.generated, failed: data.failed, errors: data.errors });
+      await fetchLeads();
+      setSelected(new Set());
+    }
+    setBulkGenerating(false);
+  }
+
   const selectedInTab = filtered.filter((l) => selected.has(l.id)).length;
 
   return (
@@ -125,6 +145,16 @@ export default function EmailsPage() {
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
             Vernieuwen
           </button>
+          {tab === "qualified" && (
+            <button
+              onClick={generateBulk}
+              disabled={bulkGenerating || selectedInTab === 0}
+              className="flex items-center gap-1.5 rounded-lg bg-[#C7F56F] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] transition-colors disabled:opacity-50"
+            >
+              {bulkGenerating ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}
+              {bulkGenerating ? "Genereren…" : selectedInTab > 0 ? `Genereer geselecteerde (${selectedInTab})` : "Genereer alles"}
+            </button>
+          )}
           {tab === "email_ready" && (
             <button
               onClick={sendBulk}
@@ -146,7 +176,8 @@ export default function EmailsPage() {
             : "border-[#C7F56F]/30 bg-[#C7F56F]/10 text-[#3a6600] dark:text-[#C7F56F]"
         }`}>
           <div>
-            <strong>{bulkResult.sent} verzonden</strong>
+            {bulkResult.sent != null && <strong>{bulkResult.sent} verzonden</strong>}
+            {bulkResult.generated != null && <strong>{bulkResult.generated} gegenereerd</strong>}
             {(bulkResult.failed ?? 0) > 0 && `, ${bulkResult.failed} mislukt`}
             {bulkResult.errors && bulkResult.errors.length > 0 && (
               <ul className="mt-1 text-xs opacity-80">
@@ -161,7 +192,7 @@ export default function EmailsPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 rounded-lg bg-gray-100 dark:bg-gray-800 p-1 w-fit">
-        {([["email_ready", "Klaar"], ["sent", "Verzonden"]] as [Tab, string][]).map(([value, label]) => (
+        {([["qualified", "Gekwalificeerd"], ["email_ready", "Klaar"], ["sent", "Verzonden"]] as [Tab, string][]).map(([value, label]) => (
           <button
             key={value}
             onClick={() => setTab(value)}
@@ -194,8 +225,10 @@ export default function EmailsPage() {
         ) : filtered.length === 0 ? (
           <div className="py-16 text-center">
             <p className="text-sm text-gray-400 dark:text-gray-500">
-              {tab === "email_ready"
-                ? "Geen e-mails klaar. Genereer eerst e-mails voor gekwalificeerde leads."
+              {tab === "qualified"
+                ? "Geen gekwalificeerde leads. Kwalificeer leads op het dashboard."
+                : tab === "email_ready"
+                ? "Geen e-mails klaar. Genereer e-mails voor gekwalificeerde leads."
                 : "Nog geen e-mails verzonden."}
             </p>
           </div>
@@ -203,7 +236,7 @@ export default function EmailsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 dark:border-gray-800">
-                {tab === "email_ready" && (
+                {(tab === "email_ready" || tab === "qualified") && (
                   <th className="w-10 px-4 py-3">
                     <input
                       type="checkbox"
@@ -226,7 +259,7 @@ export default function EmailsPage() {
                 const isSending = sending.has(lead.id);
                 return (
                   <tr key={lead.id} className={cn("hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors", selected.has(lead.id) && "bg-[#C7F56F]/5")}>
-                    {tab === "email_ready" && (
+                    {(tab === "email_ready" || tab === "qualified") && (
                       <td className="w-10 px-4 py-3">
                         <input
                           type="checkbox"
@@ -280,6 +313,25 @@ export default function EmailsPage() {
                           >
                             {isSending ? <Loader2 size={11} className="animate-spin" /> : <Send size={11} />}
                             Stuur
+                          </button>
+                        )}
+                        {tab === "qualified" && (
+                          <button
+                            onClick={async () => {
+                              setSending((prev) => new Set(prev).add(lead.id));
+                              await fetch("/api/emails/generate-bulk", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ ids: [lead.id] }),
+                              });
+                              await fetchLeads();
+                              setSending((prev) => { const n = new Set(prev); n.delete(lead.id); return n; });
+                            }}
+                            disabled={sending.has(lead.id)}
+                            className="flex items-center gap-1 rounded-lg bg-[#C7F56F] px-2.5 py-1.5 text-xs font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] transition-colors disabled:opacity-50"
+                          >
+                            {sending.has(lead.id) ? <Loader2 size={11} className="animate-spin" /> : <Mail size={11} />}
+                            Genereer
                           </button>
                         )}
                       </div>

@@ -1,4 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
+import { qualifyLead } from "@/lib/openai";
+import { generateEmail, findContactEmail, isValidEmail } from "@/lib/openai";
+import { sendEmail } from "@/lib/mailer";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
@@ -9,25 +12,26 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const supabase = await createClient();
+  // Use service client to bypass RLS for cron operations
+  const supabase = await createServiceClient();
 
-  // Check if scrape is due
-  const { data: nextScrapeRow } = await supabase
-    .from("settings")
-    .select("value")
-    .eq("key", "next_scrape_at")
-    .single();
-
+  // Check schedule settings
   const { data: scheduleRow } = await supabase
     .from("settings")
     .select("value")
     .eq("key", "scrape_schedule")
-    .single();
+    .maybeSingle();
 
   const schedule = scheduleRow?.value ?? "off";
   if (schedule === "off") {
     return NextResponse.json({ message: "Scheduler is uitgeschakeld" }, { status: 200 });
   }
+
+  const { data: nextScrapeRow } = await supabase
+    .from("settings")
+    .select("value")
+    .eq("key", "next_scrape_at")
+    .maybeSingle();
 
   if (nextScrapeRow?.value) {
     const nextScrape = new Date(nextScrapeRow.value);
@@ -47,10 +51,113 @@ export async function GET(request: Request) {
     .eq("status", "rejected")
     .lt("rejected_at", cutoff);
 
+  // Record time before scrape to identify new leads afterward
+  const scrapeStartedAt = new Date().toISOString();
+
   // Trigger scrape via internal call
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const res = await fetch(`${baseUrl}/api/scrape`, { method: "POST" });
   const result = await res.json();
 
-  return NextResponse.json(result);
+  // Auto-mode: qualify + optionally generate + send
+  const { data: autoModeRow } = await supabase
+    .from("settings")
+    .select("value")
+    .eq("key", "auto_mode")
+    .maybeSingle();
+
+  const autoMode = autoModeRow?.value ?? "off";
+
+  if (autoMode !== "off" && (result.inserted ?? 0) > 0) {
+    // Fetch newly inserted leads
+    const { data: newLeads } = await supabase
+      .from("leads")
+      .select("*")
+      .eq("status", "new")
+      .gte("scraped_at", scrapeStartedAt);
+
+    if (newLeads && newLeads.length > 0) {
+      // Get min score threshold
+      const { data: minScoreRow } = await supabase
+        .from("settings")
+        .select("value")
+        .eq("key", "min_score_threshold")
+        .maybeSingle();
+      const minScore = parseInt(minScoreRow?.value ?? "6");
+
+      // Get active SMTP accounts for round-robin
+      const { data: smtpAccounts } = await supabase
+        .from("email_accounts")
+        .select("*")
+        .eq("active", true)
+        .order("last_used_at", { ascending: true, nullsFirst: true });
+
+      let accountIndex = 0;
+
+      for (const lead of newLeads) {
+        try {
+          // Step 1: Qualify
+          const qualResult = await qualifyLead(lead);
+
+          await supabase.from("leads").update({
+            ai_score: qualResult.score,
+            ai_tier: qualResult.tier,
+            ai_reasoning: qualResult.reasoning,
+            ai_key_selling_point: qualResult.key_selling_point,
+            ai_monthly_cost_est: qualResult.estimated_monthly_cost,
+            ai_company_size: qualResult.company_size_estimate,
+            ai_best_flow: qualResult.best_flow,
+            ai_best_pitch: qualResult.best_pitch,
+            status: "qualified",
+            qualified_at: new Date().toISOString(),
+          }).eq("id", lead.id);
+
+          // Skip low-scoring leads for email generation
+          if (qualResult.score < minScore) continue;
+          if (!smtpAccounts || smtpAccounts.length === 0) continue;
+
+          // Step 2: Generate email
+          const account = smtpAccounts[accountIndex % smtpAccounts.length];
+          accountIndex++;
+
+          const qualifiedLead = { ...lead, ...qualResult, status: "qualified" };
+          const [emailResult, contactResult] = await Promise.all([
+            generateEmail(qualifiedLead, account.from_name, account.from_email),
+            findContactEmail(lead.company ?? "", lead.location),
+          ]);
+
+          const emailValid = contactResult.email && isValidEmail(contactResult.email);
+
+          await supabase.from("leads").update({
+            draft_subject: emailResult.subject,
+            draft_email: emailResult.body,
+            contact_email: emailValid ? contactResult.email : null,
+            email_confidence: contactResult.confidence,
+            status: "email_ready",
+          }).eq("id", lead.id);
+
+          // Step 3: Auto-send if mode is "send" and we have a valid email
+          if (autoMode === "send" && emailValid && contactResult.email) {
+            const sendResult = await sendEmail(
+              contactResult.email,
+              emailResult.subject,
+              emailResult.body,
+              lead.id
+            );
+            if (sendResult.success) {
+              await supabase.from("leads").update({
+                status: "sent",
+                email_sent_at: new Date().toISOString(),
+                sent_from_email: sendResult.from_email,
+              }).eq("id", lead.id);
+            }
+          }
+        } catch (err) {
+          console.error(`[cron] auto-mode error for lead ${lead.id}:`, err);
+        }
+      }
+    }
+  }
+
+  return NextResponse.json({ ...result, auto_mode: autoMode });
 }

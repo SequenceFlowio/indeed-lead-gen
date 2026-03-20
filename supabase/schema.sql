@@ -135,6 +135,39 @@ create policy "authenticated users can access bounces"
 create index if not exists bounces_lead_id_idx on bounces(lead_id);
 create index if not exists bounces_email_idx on bounces(email);
 
+-- ============================================================
+-- MIGRATION: Multi-tenancy (run after initial setup)
+-- Adds user_id to all tables so each user only sees their own data
+-- ============================================================
+--
+-- ALTER TABLE leads ADD COLUMN IF NOT EXISTS user_id uuid references auth.users(id) default auth.uid();
+-- ALTER TABLE email_accounts ADD COLUMN IF NOT EXISTS user_id uuid references auth.users(id) default auth.uid();
+-- ALTER TABLE bounces ADD COLUMN IF NOT EXISTS user_id uuid references auth.users(id) default auth.uid();
+-- ALTER TABLE search_queries ADD COLUMN IF NOT EXISTS user_id uuid references auth.users(id) default auth.uid();
+-- ALTER TABLE settings ADD COLUMN IF NOT EXISTS user_id uuid references auth.users(id) default auth.uid();
+-- ALTER TABLE settings DROP CONSTRAINT settings_pkey;
+-- ALTER TABLE settings ADD PRIMARY KEY (user_id, key);
+--
+-- Update existing rows to your user ID (find it in Supabase Auth dashboard):
+-- UPDATE leads SET user_id = '<your-user-id>' WHERE user_id IS NULL;
+-- UPDATE email_accounts SET user_id = '<your-user-id>' WHERE user_id IS NULL;
+-- UPDATE bounces SET user_id = '<your-user-id>' WHERE user_id IS NULL;
+-- UPDATE search_queries SET user_id = '<your-user-id>' WHERE user_id IS NULL;
+-- UPDATE settings SET user_id = '<your-user-id>' WHERE user_id IS NULL;
+--
+-- Then update RLS policies:
+-- DROP POLICY IF EXISTS "authenticated users can access leads" ON leads;
+-- DROP POLICY IF EXISTS "authenticated users can access search_queries" ON search_queries;
+-- DROP POLICY IF EXISTS "authenticated users can access settings" ON settings;
+-- DROP POLICY IF EXISTS "authenticated users can access email_accounts" ON email_accounts;
+-- DROP POLICY IF EXISTS "authenticated users can access bounces" ON bounces;
+-- CREATE POLICY "user_leads" ON leads FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+-- CREATE POLICY "user_search_queries" ON search_queries FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+-- CREATE POLICY "user_settings" ON settings FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+-- CREATE POLICY "user_email_accounts" ON email_accounts FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+-- CREATE POLICY "user_bounces" ON bounces FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+-- ============================================================
+
 -- Auto-update updated_at on leads
 create or replace function update_updated_at_column()
 returns trigger as $$

@@ -68,7 +68,10 @@ export interface EmailResult {
   body: string;
 }
 
-export async function generateEmail(lead: Lead): Promise<EmailResult> {
+export async function generateEmail(lead: Lead, fromName?: string, fromEmail?: string): Promise<EmailResult> {
+  const senderName = fromName ?? "Noah";
+  const senderEmail = fromEmail ?? "noah@getsequenceflow.nl";
+
   const systemPrompt = `Je bent een senior business advisor bij SequenceFlow die een persoonlijke koude e-mail schrijft naar een bedrijf dat een vacature heeft geplaatst.
 
 REGELS (strikt volgen):
@@ -87,7 +90,7 @@ Alinea 2: Hoe SequenceFlow dit specifiek kan oplossen + een concreet voorbeeld
 
 CTA: "Zou u open staan voor een kort gesprek om te kijken of dit relevant is voor [bedrijfsnaam]?"
 
-AFZENDER: noah@getsequenceflow.nl (Noah van SequenceFlow)
+AFZENDER: ${senderEmail} (${senderName})
 
 Geef ALLEEN een JSON-object terug:
 {
@@ -142,14 +145,40 @@ Geef je antwoord ALLEEN als JSON-object, zonder extra tekst:
       input,
     });
 
-    // Extract text from response output
-    const text = response.output_text ?? "";
+    // Try output_text first (convenience property)
+    let text = response.output_text ?? "";
 
-    // Parse JSON from the response text
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return { email: null, confidence: "none", source: "Geen resultaat" };
-    return JSON.parse(jsonMatch[0]) as ContactEmailResult;
-  } catch {
+    // Fallback: collect text from output array
+    if (!text && response.output) {
+      for (const item of response.output) {
+        if (item.type === "message" && Array.isArray(item.content)) {
+          for (const block of item.content) {
+            if (block.type === "output_text" || block.type === "text") {
+              text += (block as { text: string }).text ?? "";
+            }
+          }
+        }
+      }
+    }
+
+    console.log("[findContactEmail] raw response text:", text.slice(0, 500));
+
+    // Strip markdown code blocks if present
+    const stripped = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+
+    // Extract JSON object
+    const jsonMatch = stripped.match(/\{[\s\S]*?\}/);
+    if (!jsonMatch) {
+      console.log("[findContactEmail] no JSON found in response");
+      return { email: null, confidence: "none", source: "Geen JSON in antwoord" };
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]) as ContactEmailResult;
+    // Ensure null not the string "null"
+    if (parsed.email === "null" || parsed.email === "") parsed.email = null;
+    return parsed;
+  } catch (err) {
+    console.error("[findContactEmail] error:", err);
     return { email: null, confidence: "none", source: "Zoekopdracht mislukt" };
   }
 }
