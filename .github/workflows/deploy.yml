@@ -25,17 +25,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Write runtime env vars to .env.production
-        run: |
-          echo "NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" >> .env.production
-          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" >> .env.production
-          echo "NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL }}" >> .env.production
-          echo "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" >> .env.production
-          echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env.production
-          echo "SCRAPER_URL=${{ secrets.SCRAPER_URL }}" >> .env.production
-          echo "CRON_SECRET=${{ secrets.CRON_SECRET }}" >> .env.production
-          echo "WEBSHARE_API_KEY=${{ secrets.WEBSHARE_API_KEY }}" >> .env.production
-
       - name: Build
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
@@ -56,7 +45,6 @@ jobs:
           echo '' > .gitignore
           git add -f .next/standalone/
           git add -f .next/static/
-          git add -f .env.production
           git add package.json next.config.ts
           mv .gitignore.bak .gitignore
           git commit -m "Deploy prebuilt [skip ci]"
