@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
-import { Search, Mail, ExternalLink, CheckCircle2, XCircle, Zap, ChevronUp, ChevronDown, Trash2 } from "lucide-react";
+import { Search, Mail, ExternalLink, CheckCircle2, XCircle, ChevronUp, ChevronDown, Trash2 } from "lucide-react";
 import { Lead, LeadStatus } from "@/lib/types";
 import StatusBadge from "@/components/StatusBadge";
 import ScoreBadge from "@/components/ScoreBadge";
@@ -122,21 +122,14 @@ export default function LeadsTable({ leads, onRefresh }: LeadsTableProps) {
     }
   }
 
-  async function bulkAction(action: "approve" | "reject" | "approve_hot" | "reject_cold") {
+  async function bulkAction(action: "approve" | "reject") {
     setBulkLoading(true);
     try {
-      let ids: string[] = [];
-      if (action === "approve_hot") {
-        ids = filtered.filter((l) => (l.ai_score ?? 0) >= 7).map((l) => l.id);
-      } else if (action === "reject_cold") {
-        ids = filtered.filter((l) => (l.ai_score ?? 11) < 5).map((l) => l.id);
-      } else {
-        ids = Array.from(selected);
-      }
+      const ids = Array.from(selected);
 
       if (ids.length === 0) return;
 
-      const status = action === "approve" || action === "approve_hot" ? "qualified" : "rejected";
+      const status = action === "approve" ? "qualified" : "rejected";
       await fetch("/api/bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -242,22 +235,6 @@ export default function LeadsTable({ leads, onRefresh }: LeadsTableProps) {
               )}
             </>
           )}
-          <button
-            onClick={() => bulkAction("approve_hot")}
-            disabled={bulkLoading}
-            className="flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
-          >
-            <Zap size={12} className="text-[#C7F56F]" />
-            Alles ≥7 kwalificeren
-          </button>
-          <button
-            onClick={() => bulkAction("reject_cold")}
-            disabled={bulkLoading}
-            className="flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
-          >
-            <XCircle size={12} className="text-red-400" />
-            Alles &lt;5 afwijzen
-          </button>
         </div>
       )}
 
