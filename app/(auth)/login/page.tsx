@@ -35,14 +35,17 @@ function LoginContent() {
 
   async function handleGoogleLogin() {
     setLoginError(null);
+    console.log("[login] button clicked");
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({
+    const redirectTo = `${window.location.origin}/auth/callback`;
+    console.log("[login] redirectTo:", redirectTo);
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
+      options: { redirectTo },
     });
+    console.log("[login] data:", data, "error:", error);
     if (error) setLoginError(error.message);
+    else if (!data?.url) setLoginError("Geen redirect URL ontvangen van Supabase. Controleer SUPABASE env vars op Vercel.");
   }
 
   return (
