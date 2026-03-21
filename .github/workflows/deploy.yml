@@ -55,7 +55,7 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -p 65002 147.79.96.85 >> ~/.ssh/known_hosts
+          ssh-keyscan -p 65002 -T 10 147.79.96.85 >> ~/.ssh/known_hosts 2>/dev/null
           cat > /tmp/.env.production << EOF
           NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
@@ -65,4 +65,4 @@ jobs:
           CRON_SECRET=${{ secrets.CRON_SECRET }}
           WEBSHARE_API_KEY=${{ secrets.WEBSHARE_API_KEY }}
           EOF
-          scp -P 65002 -i ~/.ssh/id_ed25519 /tmp/.env.production u622361615@147.79.96.85:/home/u622361615/domains/outreach.sequenceflow.io/nodejs/.env.production
+          scp -P 65002 -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no /tmp/.env.production u622361615@147.79.96.85:/home/u622361615/domains/outreach.sequenceflow.io/nodejs/.env.production
