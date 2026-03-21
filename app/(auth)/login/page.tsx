@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import Image from "next/image";
 
 function GoogleIcon() {
@@ -31,15 +31,18 @@ function GoogleIcon() {
 function LoginContent() {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   async function handleGoogleLogin() {
+    setLoginError(null);
     const supabase = createClient();
-    await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
       },
     });
+    if (error) setLoginError(error.message);
   }
 
   return (
@@ -108,6 +111,12 @@ function LoginContent() {
             {error && (
               <div className="mt-4 rounded-xl bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-600 dark:text-red-400">
                 Er is iets misgegaan. Probeer opnieuw.
+              </div>
+            )}
+
+            {loginError && (
+              <div className="mt-4 rounded-xl bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-600 dark:text-red-400">
+                Login fout: {loginError}
               </div>
             )}
 
