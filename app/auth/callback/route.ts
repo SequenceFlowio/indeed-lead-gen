@@ -8,6 +8,11 @@ export async function GET(request: Request) {
   const next = searchParams.get("next") ?? "/";
   const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://outreach.sequenceflow.io";
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  console.log("[callback] SUPABASE_URL:", supabaseUrl?.slice(0, 30));
+  console.log("[callback] ANON_KEY starts with:", supabaseKey?.slice(0, 10), "length:", supabaseKey?.length);
+
   if (code) {
     const cookieStore = await cookies();
     const supabase = createServerClient(
