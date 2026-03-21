@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { qualifyLead, generateEmail, findContactEmail, isValidEmail } from "@/lib/openai";
+import { sendEmail } from "@/lib/mailer";
 import { NextResponse } from "next/server";
 
 interface ScraperJob {
@@ -85,6 +87,7 @@ export async function POST() {
     .map((term) => `-${term}`)
     .join(" ");
 
+  const scrapeStartedAt = new Date().toISOString();
   let totalScraped = 0;
   let totalInserted = 0;
   let totalSkipped = 0;
@@ -152,6 +155,79 @@ export async function POST() {
       }
     } catch (err) {
       errors.push(`Query "${q.query}": ${err instanceof Error ? err.message : "Onbekende fout"}`);
+    }
+  }
+
+  // Auto-qualify newly inserted leads
+  if (totalInserted > 0) {
+    const { data: autoModeRow } = await supabase.from("settings").select("value").eq("key", "auto_mode").maybeSingle();
+    const autoMode = autoModeRow?.value ?? "off";
+
+    if (autoMode !== "off") {
+      const { data: newLeads } = await supabase.from("leads").select("*").eq("status", "new").gte("scraped_at", scrapeStartedAt);
+
+      if (newLeads && newLeads.length > 0) {
+        const { data: minScoreRow } = await supabase.from("settings").select("value").eq("key", "min_score_threshold").maybeSingle();
+        const minScore = parseInt(minScoreRow?.value ?? "6");
+
+        const { data: smtpAccounts } = await supabase.from("email_accounts").select("*").eq("active", true).order("last_used_at", { ascending: true, nullsFirst: true });
+
+        let accountIndex = 0;
+        for (const lead of newLeads) {
+          try {
+            const qualResult = await qualifyLead(lead);
+            const isGood = qualResult.score >= minScore;
+
+            await supabase.from("leads").update({
+              ai_score: qualResult.score,
+              ai_tier: qualResult.tier,
+              ai_reasoning: qualResult.reasoning,
+              ai_key_selling_point: qualResult.key_selling_point,
+              ai_monthly_cost_est: qualResult.estimated_monthly_cost,
+              ai_company_size: qualResult.company_size_estimate,
+              ai_best_flow: qualResult.best_flow,
+              ai_best_pitch: qualResult.best_pitch,
+              status: isGood ? "qualified" : "rejected",
+              qualified_at: isGood ? new Date().toISOString() : null,
+              rejected_at: isGood ? null : new Date().toISOString(),
+            }).eq("id", lead.id);
+
+            if (!isGood || !smtpAccounts || smtpAccounts.length === 0) continue;
+
+            const account = smtpAccounts[accountIndex % smtpAccounts.length];
+            accountIndex++;
+
+            const qualifiedLead = { ...lead, ...qualResult, status: "qualified" as const };
+            const [emailResult, contactResult] = await Promise.all([
+              generateEmail(qualifiedLead, account.from_name, account.from_email),
+              findContactEmail(lead.company ?? "", lead.location),
+            ]);
+
+            const emailValid = contactResult.email && isValidEmail(contactResult.email);
+
+            await supabase.from("leads").update({
+              draft_subject: emailResult.subject,
+              draft_email: emailResult.body,
+              contact_email: emailValid ? contactResult.email : null,
+              email_confidence: contactResult.confidence,
+              status: "email_ready",
+            }).eq("id", lead.id);
+
+            if (autoMode === "send" && emailValid && contactResult.email) {
+              const sendResult = await sendEmail(contactResult.email, emailResult.subject, emailResult.body, lead.id);
+              if (sendResult.success) {
+                await supabase.from("leads").update({
+                  status: "sent",
+                  email_sent_at: new Date().toISOString(),
+                  sent_from_email: sendResult.from_email,
+                }).eq("id", lead.id);
+              }
+            }
+          } catch (err) {
+            console.error(`[scrape] auto-qualify error for lead ${lead.id}:`, err);
+          }
+        }
+      }
     }
   }
 
