@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
-import { Search, Mail, ExternalLink, CheckCircle2, XCircle, Zap, ChevronUp, ChevronDown } from "lucide-react";
+import { Search, Mail, ExternalLink, CheckCircle2, XCircle, Zap, ChevronUp, ChevronDown, Trash2 } from "lucide-react";
 import { Lead, LeadStatus } from "@/lib/types";
 import StatusBadge from "@/components/StatusBadge";
 import ScoreBadge from "@/components/ScoreBadge";
@@ -105,6 +105,23 @@ export default function LeadsTable({ leads, onRefresh }: LeadsTableProps) {
     });
   }
 
+  async function bulkDelete() {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    setBulkLoading(true);
+    try {
+      await fetch("/api/bulk", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+      setSelected(new Set());
+      onRefresh?.();
+    } finally {
+      setBulkLoading(false);
+    }
+  }
+
   async function bulkAction(action: "approve" | "reject" | "approve_hot" | "reject_cold") {
     setBulkLoading(true);
     try {
@@ -194,22 +211,35 @@ export default function LeadsTable({ leads, onRefresh }: LeadsTableProps) {
           {selected.size > 0 && (
             <>
               <span className="text-xs text-gray-500 dark:text-gray-400">{selected.size} geselecteerd</span>
-              <button
-                onClick={() => bulkAction("approve")}
-                disabled={bulkLoading}
-                className="flex items-center gap-1.5 rounded-lg bg-[#C7F56F]/10 border border-[#C7F56F]/30 px-3 py-1.5 text-xs font-medium text-[#3a6600] dark:text-[#C7F56F] hover:bg-[#C7F56F]/20 transition-colors disabled:opacity-50"
-              >
-                <CheckCircle2 size={12} />
-                Kwalificeren
-              </button>
-              <button
-                onClick={() => bulkAction("reject")}
-                disabled={bulkLoading}
-                className="flex items-center gap-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-3 py-1.5 text-xs font-medium text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50"
-              >
-                <XCircle size={12} />
-                Afwijzen
-              </button>
+              {statusFilter === "rejected" ? (
+                <button
+                  onClick={bulkDelete}
+                  disabled={bulkLoading}
+                  className="flex items-center gap-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-3 py-1.5 text-xs font-medium text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50"
+                >
+                  <Trash2 size={12} />
+                  Verwijderen
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => bulkAction("approve")}
+                    disabled={bulkLoading}
+                    className="flex items-center gap-1.5 rounded-lg bg-[#C7F56F]/10 border border-[#C7F56F]/30 px-3 py-1.5 text-xs font-medium text-[#3a6600] dark:text-[#C7F56F] hover:bg-[#C7F56F]/20 transition-colors disabled:opacity-50"
+                  >
+                    <CheckCircle2 size={12} />
+                    Kwalificeren
+                  </button>
+                  <button
+                    onClick={() => bulkAction("reject")}
+                    disabled={bulkLoading}
+                    className="flex items-center gap-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-3 py-1.5 text-xs font-medium text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50"
+                  >
+                    <XCircle size={12} />
+                    Afwijzen
+                  </button>
+                </>
+              )}
             </>
           )}
           <button

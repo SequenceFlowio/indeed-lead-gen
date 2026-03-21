@@ -23,3 +23,18 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ updated: ids.length });
 }
+
+export async function DELETE(request: Request) {
+  const supabase = await createClient();
+  const { ids } = await request.json();
+
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    return NextResponse.json({ error: "No IDs provided" }, { status: 400 });
+  }
+
+  const { error } = await supabase.from("leads").delete().in("id", ids);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  return NextResponse.json({ deleted: ids.length });
+}
