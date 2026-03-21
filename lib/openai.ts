@@ -130,51 +130,23 @@ export async function findContactEmail(
   company: string,
   location: string | null
 ): Promise<ContactEmailResult> {
-  const input = `Zoek het zakelijke e-mailadres voor het Nederlandse bedrijf "${company}" (locatie: ${location ?? "Nederland"}).
+  const prompt = `Zoek het zakelijke e-mailadres voor het Nederlandse bedrijf "${company}" (locatie: ${location ?? "Nederland"}).
 
 Prioriteit: directe contactpersoon/manager/eigenaar > info@ > contact@ > ander zakelijk e-mailadres.
-Zoek op de website van het bedrijf, LinkedIn, KVK, of andere openbare bronnen.
-
 Geef je antwoord ALLEEN als JSON-object, zonder extra tekst:
 {"email": "gevonden@email.com of null als niet gevonden", "confidence": "high of medium of low of none", "source": "korte beschrijving van de bron"}`;
 
   try {
-    const response = await getOpenAI().responses.create({
-      model: "gpt-4o-search-preview",
-      tools: [{ type: "web_search_preview" as "web_search_preview" }],
-      input,
+    const response = await getOpenAI().chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.1,
+      response_format: { type: "json_object" },
     });
 
-    // Try output_text first (convenience property)
-    let text = response.output_text ?? "";
-
-    // Fallback: collect text from output array
-    if (!text && response.output) {
-      for (const item of response.output) {
-        if (item.type === "message" && Array.isArray(item.content)) {
-          for (const block of item.content) {
-            if (block.type === "output_text") {
-              text += block.text ?? "";
-            }
-          }
-        }
-      }
-    }
-
-    console.log("[findContactEmail] raw response text:", text.slice(0, 500));
-
-    // Strip markdown code blocks if present
-    const stripped = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
-
-    // Extract JSON object
-    const jsonMatch = stripped.match(/\{[\s\S]*?\}/);
-    if (!jsonMatch) {
-      console.log("[findContactEmail] no JSON found in response");
-      return { email: null, confidence: "none", source: "Geen JSON in antwoord" };
-    }
-
-    const parsed = JSON.parse(jsonMatch[0]) as ContactEmailResult;
-    // Ensure null not the string "null"
+    const content = response.choices[0].message.content ?? "{}";
+    console.log("[findContactEmail] response:", content.slice(0, 200));
+    const parsed = JSON.parse(content) as ContactEmailResult;
     if (parsed.email === "null" || parsed.email === "") parsed.email = null;
     return parsed;
   } catch (err) {

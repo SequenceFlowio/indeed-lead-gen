@@ -214,7 +214,7 @@ export async function POST() {
             }).eq("id", lead.id);
 
             if (autoMode === "send" && emailValid && contactResult.email) {
-              const sendResult = await sendEmail(contactResult.email, emailResult.subject, emailResult.body, lead.id);
+              const sendResult = await sendEmail(contactResult.email, emailResult.subject, emailResult.body, lead.id, lead);
               if (sendResult.success) {
                 await supabase.from("leads").update({
                   status: "sent",

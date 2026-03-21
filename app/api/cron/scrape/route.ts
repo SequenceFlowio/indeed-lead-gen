@@ -145,7 +145,8 @@ export async function GET(request: Request) {
               contactResult.email,
               emailResult.subject,
               emailResult.body,
-              lead.id
+              lead.id,
+              lead
             );
             if (sendResult.success) {
               await supabase.from("leads").update({

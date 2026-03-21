@@ -28,7 +28,8 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     lead.contact_email,
     lead.draft_subject ?? "(geen onderwerp)",
     lead.draft_email,
-    lead.id
+    lead.id,
+    lead
   );
 
   if (!result.success) {

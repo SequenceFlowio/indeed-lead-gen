@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import { createServiceClient } from "@/lib/supabase/server";
 import { EmailAccount } from "@/lib/types";
+import { DEFAULT_EMAIL_TEMPLATE, TemplateVars, renderTemplate } from "@/lib/email-template";
 
 export interface SendResult {
   success: boolean;
@@ -12,7 +13,8 @@ export async function sendEmail(
   to: string,
   subject: string,
   body: string,
-  leadId: string
+  leadId: string,
+  lead?: { user_id?: string; company?: string | null; title?: string | null; location?: string | null; salary?: string | null; url?: string | null }
 ): Promise<SendResult> {
   const supabase = await createServiceClient();
 
@@ -29,6 +31,32 @@ export async function sendEmail(
   }
 
   const account: EmailAccount = accounts[0];
+
+  // Fetch user's custom template (or fall back to default)
+  let templateHtml = DEFAULT_EMAIL_TEMPLATE;
+  if (lead?.user_id) {
+    const { data: tmplRow } = await supabase
+      .from("settings")
+      .select("value")
+      .eq("user_id", lead.user_id)
+      .eq("key", "email_template")
+      .maybeSingle();
+    if (tmplRow?.value) templateHtml = tmplRow.value;
+  }
+
+  const vars: TemplateVars = {
+    body,
+    subject,
+    company: lead?.company ?? "",
+    title: lead?.title ?? "",
+    location: lead?.location ?? "",
+    salary: lead?.salary ?? "niet vermeld",
+    url: lead?.url ?? "#",
+    from_name: account.from_name ?? "",
+    from_email: account.from_email ?? "",
+  };
+
+  const htmlBody = renderTemplate(templateHtml, vars);
 
   const transporter = nodemailer.createTransport({
     host: account.smtp_host,
@@ -49,22 +77,9 @@ export async function sendEmail(
       to,
       subject,
       text: body,
-      html: `<div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #1a1a1a; max-width: 600px;">
-        <p style="white-space: pre-wrap;">${body}</p>
-        <br/>
-        <p style="color: #666; font-size: 12px;">
-          Met vriendelijke groet,<br/>
-          <strong>${account.from_name}</strong><br/>
-          SequenceFlow · ${account.from_email}
-        </p>
-        <br/>
-        <p style="color: #999; font-size: 11px;">
-          Als u geen interesse heeft, kunt u simpelweg niet reageren op deze e-mail.
-        </p>
-      </div>`,
+      html: htmlBody,
     });
 
-    // Update account: sent_count++ and last_used_at
     await supabase
       .from("email_accounts")
       .update({

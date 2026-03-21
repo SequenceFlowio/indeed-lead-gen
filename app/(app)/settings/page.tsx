@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Save, Loader2, ToggleLeft, ToggleRight, Eye, EyeOff } from "lucide-react";
+import { Plus, Trash2, Save, Loader2, ToggleLeft, ToggleRight, Eye, EyeOff, RotateCcw } from "lucide-react";
 import { SearchQuery, EmailAccount } from "@/lib/types";
+import { DEFAULT_EMAIL_TEMPLATE } from "@/lib/email-template";
 import { createClient } from "@/lib/supabase/client";
 
 const DEFAULT_QUERIES = [
@@ -56,6 +57,10 @@ export default function SettingsPage() {
   const [autoMode, setAutoMode] = useState("off");
   const [savingAutoMode, setSavingAutoMode] = useState(false);
 
+  // Email template state
+  const [emailTemplate, setEmailTemplate] = useState("");
+  const [savingTemplate, setSavingTemplate] = useState(false);
+
   // Webshare bandwidth
   interface WebshareStats { used_mb: number; limit_mb: number | null; remaining_mb: number | null; usage_percent: number | null; reset_date: string; unlimited: boolean; error?: string; }
   const [webshare, setWebshare] = useState<WebshareStats | null>(null);
@@ -77,6 +82,7 @@ export default function SettingsPage() {
     loadEmailAccounts();
     loadWebshare();
     loadAutoMode();
+    loadEmailTemplate();
   }, []);
 
   async function loadQueries() {
@@ -103,6 +109,18 @@ export default function SettingsPage() {
       setSchedule(data.schedule ?? "off");
       setNextScrapeAt(data.next_scrape_at ?? null);
     }
+  }
+
+  async function loadEmailTemplate() {
+    const { data } = await createClient().from("settings").select("value").eq("key", "email_template").maybeSingle();
+    setEmailTemplate(data?.value ?? DEFAULT_EMAIL_TEMPLATE);
+  }
+
+  async function saveEmailTemplate() {
+    setSavingTemplate(true);
+    await createClient().from("settings").upsert({ key: "email_template", value: emailTemplate, updated_at: new Date().toISOString() });
+    showSuccess("E-mail template opgeslagen");
+    setSavingTemplate(false);
   }
 
   async function loadAutoMode() {
@@ -659,6 +677,41 @@ export default function SettingsPage() {
               Kommagescheiden. Grote merken (DHL, PostNL, Albert Heijn, etc.) worden al automatisch geblokkeerd.
             </p>
           </div>
+        </div>
+      </section>
+
+      {/* Email template */}
+      <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">E-mail template</h2>
+            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+              Gebruik <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">{"{{body}}"}</code>, <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">{"{{company}}"}</code>, <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">{"{{title}}"}</code>, <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">{"{{location}}"}</code>, <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">{"{{salary}}"}</code>, <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">{"{{url}}"}</code>, <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">{"{{from_email}}"}</code>
+            </p>
+          </div>
+          <button
+            onClick={() => setEmailTemplate(DEFAULT_EMAIL_TEMPLATE)}
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          >
+            <RotateCcw size={12} />
+            Herstel standaard
+          </button>
+        </div>
+        <textarea
+          value={emailTemplate}
+          onChange={(e) => setEmailTemplate(e.target.value)}
+          rows={20}
+          className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-xs font-mono outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30 resize-y"
+        />
+        <div className="mt-3 flex justify-end">
+          <button
+            onClick={saveEmailTemplate}
+            disabled={savingTemplate}
+            className="flex items-center gap-1.5 rounded-lg bg-[#C7F56F] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] transition-colors disabled:opacity-50"
+          >
+            {savingTemplate ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            Template opslaan
+          </button>
         </div>
       </section>
 
