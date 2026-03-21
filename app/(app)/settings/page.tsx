@@ -301,7 +301,7 @@ export default function SettingsPage() {
         <div className="mt-5 border-t border-gray-100 dark:border-gray-800 pt-5">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Webshare bandbreedte</p>
           {!webshare ? (
-            <p className="text-xs text-gray-400 dark:text-gray-500">Niet gekoppeld — voeg <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">WEBSHARE_API_KEY</code> toe aan je omgevingsvariabelen.</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">Probleem met proxy API</p>
           ) : webshare.error ? (
             <p className="text-xs text-red-500">{webshare.error}</p>
           ) : webshare.unlimited ? (
