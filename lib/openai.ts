@@ -137,16 +137,23 @@ Geef je antwoord ALLEEN als JSON-object, zonder extra tekst:
 {"email": "gevonden@email.com of null als niet gevonden", "confidence": "high of medium of low of none", "source": "korte beschrijving van de bron"}`;
 
   try {
-    const response = await getOpenAI().chat.completions.create({
+    const response = await getOpenAI().responses.create({
       model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.1,
-      response_format: { type: "json_object" },
+      tools: [{ type: "web_search" as "web_search" }],
+      input: prompt,
     });
 
-    const content = response.choices[0].message.content ?? "{}";
-    console.log("[findContactEmail] response:", content.slice(0, 200));
-    const parsed = JSON.parse(content) as ContactEmailResult;
+    const text = response.output_text ?? "";
+    console.log("[findContactEmail] response:", text.slice(0, 300));
+
+    const stripped = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+    const jsonMatch = stripped.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.log("[findContactEmail] no JSON found");
+      return { email: null, confidence: "none", source: "Geen JSON in antwoord" };
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]) as ContactEmailResult;
     if (parsed.email === "null" || parsed.email === "") parsed.email = null;
     return parsed;
   } catch (err) {
