@@ -4,6 +4,7 @@ const WEBSHARE_API = "https://proxy.webshare.io/api/v2";
 
 export async function GET() {
   const apiKey = process.env.WEBSHARE_API_KEY;
+  console.log("[webshare] WEBSHARE_API_KEY present:", !!apiKey, "length:", apiKey?.length ?? 0);
   if (!apiKey) {
     return NextResponse.json({ error: "WEBSHARE_API_KEY not configured" }, { status: 503 });
   }
