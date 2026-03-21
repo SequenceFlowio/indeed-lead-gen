@@ -99,6 +99,8 @@ export async function GET(request: Request) {
           // Step 1: Qualify
           const qualResult = await qualifyLead(lead);
 
+          const isGood = qualResult.score >= minScore;
+
           await supabase.from("leads").update({
             ai_score: qualResult.score,
             ai_tier: qualResult.tier,
@@ -108,12 +110,13 @@ export async function GET(request: Request) {
             ai_company_size: qualResult.company_size_estimate,
             ai_best_flow: qualResult.best_flow,
             ai_best_pitch: qualResult.best_pitch,
-            status: "qualified",
-            qualified_at: new Date().toISOString(),
+            status: isGood ? "qualified" : "rejected",
+            qualified_at: isGood ? new Date().toISOString() : null,
+            rejected_at: isGood ? null : new Date().toISOString(),
           }).eq("id", lead.id);
 
           // Skip low-scoring leads for email generation
-          if (qualResult.score < minScore) continue;
+          if (!isGood) continue;
           if (!smtpAccounts || smtpAccounts.length === 0) continue;
 
           // Step 2: Generate email
