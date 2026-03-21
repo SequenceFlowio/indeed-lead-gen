@@ -140,7 +140,7 @@ Geef je antwoord ALLEEN als JSON-object, zonder extra tekst:
 
   try {
     const response = await getOpenAI().responses.create({
-      model: "gpt-4o-mini-search-preview",
+      model: "gpt-4o-search-preview",
       tools: [{ type: "web_search_preview" as "web_search_preview" }],
       input,
     });

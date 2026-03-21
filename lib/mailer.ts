@@ -38,6 +38,9 @@ export async function sendEmail(
       user: account.smtp_user,
       pass: account.smtp_pass,
     },
+    tls: {
+      rejectUnauthorized: false,
+    },
   });
 
   try {
