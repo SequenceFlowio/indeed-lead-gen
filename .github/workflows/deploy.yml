@@ -51,9 +51,10 @@ jobs:
             "SCRAPER_URL=${{ secrets.SCRAPER_URL }}" \
             "CRON_SECRET=${{ secrets.CRON_SECRET }}" \
             "WEBSHARE_API_KEY=${{ secrets.WEBSHARE_API_KEY }}" \
-            > .next/standalone/.env.production
+            > .env.production
           git add -f .next/standalone/
           git add -f .next/static/
+          git add -f .env.production
           git add package.json next.config.ts
           mv .gitignore.bak .gitignore
           git commit -m "Deploy prebuilt [skip ci]"
