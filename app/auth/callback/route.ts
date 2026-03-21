@@ -27,7 +27,11 @@ export async function GET(request: Request) {
       }
     );
 
-    await supabase.auth.exchangeCodeForSession(code);
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) {
+      console.error("[auth/callback] exchangeCodeForSession error:", error.message);
+      return NextResponse.redirect(`${origin}/login?error=callback&msg=${encodeURIComponent(error.message)}`);
+    }
     return NextResponse.redirect(`${origin}${next}`);
   }
 
