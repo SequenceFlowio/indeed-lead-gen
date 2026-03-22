@@ -148,7 +148,7 @@ Return ONLY a JSON object, no other text:
   try {
     const response = await getOpenAI().responses.create({
       model: "gpt-4o-mini",
-      tools: [{ type: "web_search" as "web_search" }],
+      tools: [{ type: "web_search_preview_2025_03_11" as "web_search_preview_2025_03_11" }],
       input: prompt,
     });
 
