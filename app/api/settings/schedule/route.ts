@@ -8,9 +8,7 @@ export async function GET() {
   const schedule = kv["scrape_schedule"] ?? "off";
   const rawNext = kv["next_scrape_at"];
   // Only return next_scrape_at if schedule is active and the timestamp is in the future
-  const next_scrape_at = (schedule !== "off" && rawNext && new Date(rawNext) > new Date())
-    ? rawNext
-    : null;
+  const next_scrape_at = (schedule !== "off" && rawNext) ? rawNext : null;
   return NextResponse.json({ schedule, next_scrape_at });
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Users, Zap, Mail, Send, RefreshCw, Settings, PlayCircle, AlertTriangle, Clock } from "lucide-react";
 import Link from "next/link";
 import MetricCard from "@/components/MetricCard";
@@ -89,16 +89,29 @@ export default function DashboardPage() {
     }
   }
 
-  function formatNextScrape(iso: string): string {
-    const next = new Date(iso);
-    const now = new Date();
-    const diffMs = next.getTime() - now.getTime();
+  const [countdownLabel, setCountdownLabel] = useState<string>("");
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  function computeCountdown(iso: string): string {
+    const diffMs = new Date(iso).getTime() - Date.now();
     if (diffMs <= 0) return "Binnenkort";
     const diffH = Math.floor(diffMs / (1000 * 60 * 60));
     const diffM = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    const diffS = Math.floor((diffMs % (1000 * 60)) / 1000);
     if (diffH > 0) return `over ${diffH}u ${diffM}m`;
-    return `over ${diffM}m`;
+    if (diffM > 0) return `over ${diffM}m ${diffS}s`;
+    return `over ${diffS}s`;
   }
+
+  useEffect(() => {
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    if (!nextScrapeAt) { setCountdownLabel(""); return; }
+    setCountdownLabel(computeCountdown(nextScrapeAt));
+    countdownRef.current = setInterval(() => {
+      setCountdownLabel(computeCountdown(nextScrapeAt));
+    }, 1000);
+    return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
+  }, [nextScrapeAt]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -171,10 +184,10 @@ export default function DashboardPage() {
       )}
 
       {/* Next scrape indicator */}
-      {nextScrapeAt && (
+      {countdownLabel && (
         <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
           <Clock size={12} />
-          Volgende automatische scrape: {formatNextScrape(nextScrapeAt)}
+          Volgende automatische scrape: {countdownLabel}
         </div>
       )}
 

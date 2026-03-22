@@ -243,6 +243,7 @@ export async function POST(request: Request) {
       key: "next_scrape_at",
       value: nextScrape.toISOString(),
       updated_at: new Date().toISOString(),
+      ...(overrideUserId ? { user_id: overrideUserId } : {}),
     });
   }
 
