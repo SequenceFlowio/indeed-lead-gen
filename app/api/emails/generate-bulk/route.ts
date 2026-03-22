@@ -46,7 +46,7 @@ export async function POST(req: Request) {
 
       const [emailResult, contactResult] = await Promise.all([
         generateEmail(lead, account.from_name, account.from_email),
-        findContactEmail(lead.company ?? "", lead.location),
+        findContactEmail(lead.company ?? "", lead.location, lead.title),
       ]);
 
       const emailValid = contactResult.email && isValidEmail(contactResult.email);

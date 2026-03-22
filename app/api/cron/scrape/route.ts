@@ -126,7 +126,7 @@ export async function GET(request: Request) {
           const qualifiedLead = { ...lead, ...qualResult, status: "qualified" };
           const [emailResult, contactResult] = await Promise.all([
             generateEmail(qualifiedLead, account.from_name, account.from_email),
-            findContactEmail(lead.company ?? "", lead.location),
+            findContactEmail(lead.company ?? "", lead.location, lead.title),
           ]);
 
           const emailValid = contactResult.email && isValidEmail(contactResult.email);

@@ -40,7 +40,8 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     // Step 2: Find contact email
     const contactResult = await findContactEmail(
       lead.company ?? "",
-      lead.location
+      lead.location,
+      lead.title
     );
 
     // Step 3: Validate email format

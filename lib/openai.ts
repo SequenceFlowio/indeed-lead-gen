@@ -128,13 +128,22 @@ export interface ContactEmailResult {
 
 export async function findContactEmail(
   company: string,
-  location: string | null
+  location: string | null,
+  title?: string | null
 ): Promise<ContactEmailResult> {
-  const prompt = `Zoek het zakelijke e-mailadres voor het Nederlandse bedrijf "${company}" (locatie: ${location ?? "Nederland"}).
+  const prompt = `Find the contact email address for this Dutch company. Search their website, LinkedIn, KVK, and Google.
 
-Prioriteit: directe contactpersoon/manager/eigenaar > info@ > contact@ > ander zakelijk e-mailadres.
-Geef je antwoord ALLEEN als JSON-object, zonder extra tekst:
-{"email": "gevonden@email.com of null als niet gevonden", "confidence": "high of medium of low of none", "source": "korte beschrijving van de bron"}`;
+Company name: ${company}
+Location: ${location ?? "Nederland"}
+Job title they are hiring for: ${title ?? "onbekend"}
+
+Steps:
+1. Search Google for "${company} ${location ?? ""} contact email"
+2. Visit their website and look for contact/over-ons pages
+3. Look for any email address (info@, contact@, direct person email)
+
+Return ONLY a JSON object, no other text:
+{"email": "found@email.com or null if not found", "confidence": "high or medium or low or none", "source": "brief description of where you found it"}`;
 
   try {
     const response = await getOpenAI().responses.create({
