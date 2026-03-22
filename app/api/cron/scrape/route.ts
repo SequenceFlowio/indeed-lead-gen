@@ -18,7 +18,7 @@ export async function GET(request: Request) {
   // Check schedule settings
   const { data: scheduleRow } = await supabase
     .from("settings")
-    .select("value")
+    .select("value, user_id")
     .eq("key", "scrape_schedule")
     .maybeSingle();
 
@@ -54,9 +54,15 @@ export async function GET(request: Request) {
   // Record time before scrape to identify new leads afterward
   const scrapeStartedAt = new Date().toISOString();
 
-  // Trigger scrape via internal call
+  // Trigger scrape via internal call (pass secret + user_id so /api/scrape uses service client)
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const res = await fetch(`${baseUrl}/api/scrape`, { method: "POST" });
+  const res = await fetch(`${baseUrl}/api/scrape`, {
+    method: "POST",
+    headers: {
+      "x-cron-secret": process.env.CRON_SECRET ?? "",
+      ...(scheduleRow?.user_id ? { "x-user-id": scheduleRow.user_id } : {}),
+    },
+  });
   const result = await res.json();
 
   // Auto-mode: qualify + optionally generate + send

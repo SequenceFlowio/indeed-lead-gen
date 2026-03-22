@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { qualifyLead, generateEmail, findContactEmail, isValidEmail } from "@/lib/openai";
 import { sendEmail } from "@/lib/mailer";
 import { NextResponse } from "next/server";
@@ -17,8 +17,11 @@ interface ScraperJob {
   pub_date?: string;
 }
 
-export async function POST() {
-  const supabase = await createClient();
+export async function POST(request: Request) {
+  const cronSecret = request.headers.get("x-cron-secret");
+  const isInternal = cronSecret && cronSecret === process.env.CRON_SECRET;
+  const overrideUserId = isInternal ? request.headers.get("x-user-id") : null;
+  const supabase = isInternal ? await createServiceClient() : await createClient();
   const scraperUrl = process.env.SCRAPER_URL;
 
   if (!scraperUrl) {
@@ -136,6 +139,7 @@ export async function POST() {
         sequenceflow_angle: q.angle ?? null,
         scraped_at: new Date().toISOString(),
         status: "new" as const,
+        ...(overrideUserId ? { user_id: overrideUserId } : {}),
       })).filter((l) => l.job_id !== null);
 
       if (leads.length === 0) continue;
