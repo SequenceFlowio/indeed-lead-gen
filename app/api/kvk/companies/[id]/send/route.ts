@@ -13,7 +13,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ error: "Geen e-mail of contactadres beschikbaar" }, { status: 400 });
   }
 
-  const result = await sendEmail(company.contact_email, company.draft_subject, company.draft_email, company.id, null);
+  const result = await sendEmail(company.contact_email, company.draft_subject, company.draft_email, company.id, undefined);
 
   if (!result.success) {
     return NextResponse.json({ error: result.error ?? "Versturen mislukt" }, { status: 500 });

@@ -133,7 +133,7 @@ export async function POST(request: Request) {
             }).eq("id", company.id);
 
             if (autoMode === "send" && emailValid && contactResult.email) {
-              const sendResult = await sendEmail(contactResult.email, emailResult.subject, emailResult.body, company.id, null);
+              const sendResult = await sendEmail(contactResult.email, emailResult.subject, emailResult.body, company.id, undefined);
               if (sendResult.success) {
                 await supabase.from("kvk_companies").update({
                   status: "sent",
