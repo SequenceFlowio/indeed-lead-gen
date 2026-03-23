@@ -28,6 +28,6 @@ export async function POST(request: Request) {
       : [{ key: "next_scrape_at", value: "", updated_at: new Date().toISOString() }]),
   ];
 
-  await supabase.from("settings").upsert(upserts);
+  await supabase.from("settings").upsert(upserts, { onConflict: "key" });
   return NextResponse.json({ schedule, next_scrape_at });
 }

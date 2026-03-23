@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   // Check KVK schedule
   const { data: scheduleRow } = await supabase
     .from("settings")
-    .select("value, user_id")
+    .select("value")
     .eq("key", "kvk_scrape_schedule")
     .maybeSingle();
 
@@ -47,13 +47,22 @@ export async function GET(request: Request) {
     .eq("status", "rejected")
     .lt("rejected_at", cutoff);
 
+  // Get user_id from kvk_search_queries (settings table has no user_id column)
+  const { data: queryRow } = await supabase
+    .from("kvk_search_queries")
+    .select("user_id")
+    .eq("active", true)
+    .limit(1)
+    .maybeSingle();
+  const userId = (queryRow as { user_id?: string } | null)?.user_id ?? null;
+
   // Trigger KVK scrape via internal call
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const res = await fetch(`${baseUrl}/api/kvk/scrape`, {
     method: "POST",
     headers: {
       "x-cron-secret": process.env.CRON_SECRET ?? "",
-      ...(scheduleRow?.user_id ? { "x-user-id": scheduleRow.user_id } : {}),
+      ...(userId ? { "x-user-id": userId } : {}),
     },
   });
   const result = await res.json();

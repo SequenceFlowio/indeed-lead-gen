@@ -157,12 +157,10 @@ export async function POST(request: Request) {
   if (scheduleHours > 0) {
     const nextScrape = new Date();
     nextScrape.setHours(nextScrape.getHours() + scheduleHours);
-    await supabase.from("settings").upsert({
-      key: "kvk_next_scrape_at",
-      value: nextScrape.toISOString(),
-      updated_at: new Date().toISOString(),
-      ...(overrideUserId ? { user_id: overrideUserId } : {}),
-    });
+    await supabase.from("settings").upsert(
+      { key: "kvk_next_scrape_at", value: nextScrape.toISOString(), updated_at: new Date().toISOString() },
+      { onConflict: "key" }
+    );
   }
 
   return NextResponse.json({
