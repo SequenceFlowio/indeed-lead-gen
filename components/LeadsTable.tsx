@@ -342,7 +342,7 @@ export default function LeadsTable({ leads, onRefresh }: LeadsTableProps) {
                     </td>
                     <td className="px-4 py-3">
                       <button
-                        onClick={() => router.push(`/leads/${lead.id}`)}
+                        onClick={() => router.push(`/vacatures/leads/${lead.id}`)}
                         className="flex items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 px-2.5 py-1 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-[#C7F56F] transition-all"
                       >
                         <ExternalLink size={11} />

@@ -101,3 +101,64 @@ export interface ScrapeResult {
   inserted: number;
   skipped: number;
 }
+
+export type KVKStatus =
+  | "new"
+  | "qualified"
+  | "email_ready"
+  | "sent"
+  | "rejected";
+
+export interface KVKCompany {
+  id: string;
+  user_id: string | null;
+  kvk_number: string | null;
+  name: string | null;
+  city: string | null;
+  province: string | null;
+  postal_code: string | null;
+  street: string | null;
+  legal_form: string | null;
+  registration_date: string | null;
+  sbi_codes: string[] | null;
+  website: string | null;
+  status: KVKStatus;
+  // AI qualification
+  ai_score: number | null;
+  ai_tier: LeadTier | null;
+  ai_reasoning: string | null;
+  ai_key_selling_point: string | null;
+  ai_best_pitch: string | null;
+  ai_best_flow: string | null;
+  ai_monthly_cost_est: string | null;
+  ai_company_size: string | null;
+  // Email
+  contact_email: string | null;
+  email_confidence: string | null;
+  draft_subject: string | null;
+  draft_email: string | null;
+  email_sent_at: string | null;
+  sent_from_email: string | null;
+  rejected_at: string | null;
+  qualified_at: string | null;
+  // Timestamps
+  scraped_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface KVKSearchQuery {
+  id: string;
+  user_id: string | null;
+  label: string;
+  sector: string;
+  sbi_codes: string[];
+  company_size_min: number;
+  company_size_max: number;
+  legal_form: string;
+  province: string;
+  max_age_years: number;
+  results_per_page: number;
+  active: boolean;
+  created_at: string;
+}

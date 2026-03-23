@@ -5,14 +5,19 @@ import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { Moon, Sun, LogOut } from "lucide-react";
+import { Moon, Sun, LogOut, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const NAV_LINKS = [
-  { href: "/", label: "Dashboard" },
-  { href: "/emails", label: "E-mails" },
-  { href: "/bounces", label: "Bounces" },
-  { href: "/settings", label: "Instellingen" },
+const VACATURES_NAV = [
+  { href: "/vacatures", label: "Dashboard" },
+  { href: "/vacatures/emails", label: "E-mails" },
+  { href: "/vacatures/bounces", label: "Bounces" },
+  { href: "/vacatures/settings", label: "Instellingen" },
+];
+
+const KVK_NAV = [
+  { href: "/kvk", label: "Dashboard" },
+  { href: "/kvk/settings", label: "Instellingen" },
 ];
 
 export default function Header() {
@@ -52,6 +57,11 @@ export default function Header() {
     router.push("/login");
   }
 
+  const inVacatures = pathname.startsWith("/vacatures");
+  const inKvk = pathname.startsWith("/kvk");
+  const navLinks = inVacatures ? VACATURES_NAV : inKvk ? KVK_NAV : [];
+  const backHref = inVacatures || inKvk ? "/" : null;
+
   return (
     <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-[#111] sticky top-0 z-40">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-2">
@@ -74,9 +84,18 @@ export default function Header() {
 
         {/* Nav links */}
         <nav className="hidden md:flex items-center gap-1">
-          {NAV_LINKS.map((link) => {
-            const isActive = link.href === "/"
-              ? pathname === "/"
+          {backHref && (
+            <Link
+              href={backHref}
+              className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors mr-1"
+            >
+              <ArrowLeft size={13} />
+              Terug
+            </Link>
+          )}
+          {navLinks.map((link) => {
+            const isActive = link.href === "/vacatures" || link.href === "/kvk"
+              ? pathname === link.href
               : pathname.startsWith(link.href);
             return (
               <Link

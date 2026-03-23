@@ -32,8 +32,8 @@ const config: Record<LeadStatus, { label: string; classes: string }> = {
   },
 };
 
-export default function StatusBadge({ status }: { status: LeadStatus }) {
-  const { label, classes } = config[status] ?? config.new;
+export default function StatusBadge({ status }: { status: LeadStatus | string }) {
+  const { label, classes } = config[status as LeadStatus] ?? config.new;
   return (
     <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium", classes)}>
       {label}
