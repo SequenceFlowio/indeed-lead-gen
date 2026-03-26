@@ -7,8 +7,14 @@ import { NextResponse } from "next/server";
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const secret = searchParams.get("secret");
+  const authHeader = request.headers.get("authorization");
 
-  if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
+  const authorized =
+    process.env.CRON_SECRET &&
+    (authHeader === `Bearer ${process.env.CRON_SECRET}` ||
+      secret === process.env.CRON_SECRET);
+
+  if (!authorized) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
