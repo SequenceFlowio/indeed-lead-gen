@@ -23,12 +23,6 @@ const DEFAULT_QUERIES = [
   { query: "voorraadbeheer medewerker", label: "Voorraadbeheer", flow: "Operations Flow", pitch: "Houd voorraad automatisch bij met real-time data", angle: "operations" },
 ];
 
-const SCHEDULE_OPTIONS = [
-  { value: "off", label: "Uit" },
-  { value: "12", label: "Elke 12u" },
-  { value: "24", label: "Elke 24u" },
-  { value: "36", label: "Elke 36u" },
-];
 
 export default function SettingsPage() {
   const [queries, setQueries] = useState<SearchQuery[]>([]);
@@ -292,24 +286,24 @@ export default function SettingsPage() {
         <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
           Automatisch scrapen
         </h2>
-        <div className="flex flex-wrap items-center gap-2">
-          {SCHEDULE_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => saveSchedule(opt.value)}
-              disabled={savingSchedule}
-              className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                schedule === opt.value
-                  ? "bg-[#C7F56F] text-[#1a1a1a]"
-                  : "border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-              } disabled:opacity-50`}
-            >
-              {opt.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => saveSchedule(schedule === "off" ? "24" : "off")}
+            disabled={savingSchedule}
+            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors disabled:opacity-50 ${
+              schedule !== "off" ? "bg-[#C7F56F]" : "bg-gray-200 dark:bg-gray-700"
+            }`}
+          >
+            <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+              schedule !== "off" ? "translate-x-6" : "translate-x-1"
+            }`} />
+          </button>
+          <span className="text-sm text-gray-700 dark:text-gray-300">
+            {schedule !== "off" ? "Aan — scrapet elke 24 uur" : "Uit"}
+          </span>
           {savingSchedule && <Loader2 size={14} className="animate-spin text-gray-400" />}
         </div>
-          {nextScrapeAt && schedule !== "off" && (
+        {nextScrapeAt && schedule !== "off" && (
           <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">
             Volgende scrape: {formatNextScrape(nextScrapeAt)}
           </p>
