@@ -3,14 +3,17 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("settings")
-    .select("key, value")
-    .in("key", ["kvk_scrape_schedule", "kvk_next_scrape_at"]);
+  const { data } = await supabase.from("settings").select("key, value").eq("key", "kvk_scrape_schedule");
   const kv = Object.fromEntries((data ?? []).map((r: { key: string; value: string }) => [r.key, r.value]));
   const schedule = kv["kvk_scrape_schedule"] ?? "off";
-  const rawNext = kv["kvk_next_scrape_at"];
-  const next_scrape_at = (schedule !== "off" && rawNext) ? rawNext : null;
+  const next_scrape_at = schedule !== "off"
+    ? (() => {
+        const next = new Date();
+        next.setUTCHours(8, 0, 0, 0);
+        if (next <= new Date()) next.setUTCDate(next.getUTCDate() + 1);
+        return next.toISOString();
+      })()
+    : null;
   return NextResponse.json({ schedule, next_scrape_at });
 }
 
