@@ -29,22 +29,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ message: "KVK scheduler is uitgeschakeld" }, { status: 200 });
   }
 
-  const { data: nextScrapeRow } = await supabase
-    .from("settings")
-    .select("value")
-    .eq("key", "kvk_next_scrape_at")
-    .maybeSingle();
-
-  if (nextScrapeRow?.value) {
-    const nextScrape = new Date(nextScrapeRow.value);
-    if (new Date() < nextScrape) {
-      return NextResponse.json(
-        { message: "Nog niet aan de beurt", next: nextScrapeRow.value },
-        { status: 429 }
-      );
-    }
-  }
-
   // Delete rejected companies older than 24 hours
   const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   await supabase

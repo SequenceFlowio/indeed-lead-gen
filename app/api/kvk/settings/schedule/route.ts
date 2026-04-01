@@ -18,10 +18,14 @@ export async function POST(request: Request) {
   const { schedule } = await request.json();
   const supabase = await createClient();
 
-  const hours = parseInt(schedule);
-  const next_scrape_at = isNaN(hours) || schedule === "off"
+  const next_scrape_at = schedule === "off"
     ? null
-    : new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+    : (() => {
+        const next = new Date();
+        next.setUTCHours(8, 0, 0, 0);
+        if (next <= new Date()) next.setUTCDate(next.getUTCDate() + 1);
+        return next.toISOString();
+      })();
 
   const upserts = [
     { key: "kvk_scrape_schedule", value: schedule, updated_at: new Date().toISOString() },
