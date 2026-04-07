@@ -27,22 +27,24 @@ export async function GET(request: Request) {
   const supabase = await createServiceClient();
 
   // Check KVK schedule
-  const { data: scheduleRow } = await supabase
+  const { data: scheduleRows } = await supabase
     .from("settings")
     .select("value")
     .eq("key", "kvk_scrape_schedule")
-    .maybeSingle();
+    .neq("value", "off")
+    .limit(1);
 
-  const schedule = scheduleRow?.value ?? "off";
+  const schedule = scheduleRows?.[0]?.value ?? "off";
   if (schedule === "off") {
     return NextResponse.json({ message: "KVK scheduler is uitgeschakeld" }, { status: 200 });
   }
 
-  const { data: nextScrapeRow } = await supabase
+  const { data: nextScrapeRows } = await supabase
     .from("settings")
     .select("value")
     .eq("key", "kvk_next_scrape_at")
-    .maybeSingle();
+    .limit(1);
+  const nextScrapeRow = nextScrapeRows?.[0] ?? null;
 
   if (nextScrapeRow?.value) {
     const nextScrape = new Date(nextScrapeRow.value);
