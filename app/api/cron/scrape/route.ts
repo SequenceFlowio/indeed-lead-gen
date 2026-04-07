@@ -33,15 +33,20 @@ export async function GET(request: Request) {
   const supabase = await createServiceClient();
 
   // Check schedule settings
-  const { data: scheduleRows } = await supabase
+  const { data: scheduleRows, error: scheduleError } = await supabase
     .from("settings")
     .select("value")
     .eq("key", "scrape_schedule")
-    .neq("value", "off")
     .limit(1);
 
   const schedule = scheduleRows?.[0]?.value ?? "off";
-  console.log("[cron/scrape] schedule", { schedule, rowCount: scheduleRows?.length });
+  console.log("[cron/scrape] schedule query", {
+    schedule,
+    rows: scheduleRows,
+    error: scheduleError?.message,
+    serviceUrl: process.env.NEXT_PUBLIC_SUPABASE_URL?.slice(0, 30),
+    hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+  });
   if (schedule === "off") {
     return NextResponse.json({ message: "Scheduler is uitgeschakeld" }, { status: 200 });
   }
