@@ -2,15 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
 function nextCronBoundary(): Date {
-  const now = new Date();
-  const next = new Date(now);
+  const next = new Date();
   next.setUTCMinutes(0, 0, 0);
-  const h = now.getUTCHours();
-  if (h < 12) {
-    next.setUTCHours(12);
-  } else {
-    next.setUTCHours(24);
-  }
+  next.setTime(next.getTime() + 60 * 60 * 1000);
   return next;
 }
 

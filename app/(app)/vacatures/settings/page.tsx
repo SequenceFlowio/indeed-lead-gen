@@ -289,6 +289,7 @@ export default function SettingsPage() {
         <div className="flex flex-wrap items-center gap-2">
           {[
             { value: "off", label: "Uit" },
+            { value: "1", label: "Elk uur" },
             { value: "12", label: "Elke 12u" },
             { value: "24", label: "Elke 24u" },
             { value: "36", label: "Elke 36u" },
