@@ -37,6 +37,8 @@ export async function POST(request: Request) {
     .select("*")
     .eq("active", true);
 
+  console.log("[scrape] search_queries result", { count: queries?.length ?? 0, error: qError?.message, isServiceClient: !!overrideUserId || isInternal });
+
   if (qError || !queries || queries.length === 0) {
     return NextResponse.json(
       { error: "Geen actieve zoekopdrachten gevonden" },

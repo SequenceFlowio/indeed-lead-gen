@@ -41,7 +41,12 @@ export async function POST(request: Request) {
     { key: "next_scrape_at", value: next_scrape_at ?? "", updated_at: new Date().toISOString() },
   ];
 
-  await supabase.from("settings").upsert(upserts, { onConflict: "key" });
+  const { error: upsertError } = await supabase.from("settings").upsert(upserts, { onConflict: "key" });
+  console.log("[settings/schedule POST]", { schedule, upsertError: upsertError?.message ?? null });
+
+  // Verify what was actually saved
+  const { data: verify } = await supabase.from("settings").select("key, value").eq("key", "scrape_schedule");
+  console.log("[settings/schedule POST] verify read", verify);
 
   const display_next = schedule === "off" ? null : nextCronBoundary().toISOString();
   return NextResponse.json({ schedule, next_scrape_at: display_next });
