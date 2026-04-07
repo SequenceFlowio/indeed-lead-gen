@@ -8,6 +8,15 @@ function nextCronBoundary(): Date {
   return next;
 }
 
+async function upsertSetting(supabase: Awaited<ReturnType<typeof createClient>>, key: string, value: string) {
+  const { data: existing } = await supabase.from("settings").select("key").eq("key", key).maybeSingle();
+  if (existing) {
+    await supabase.from("settings").update({ value, updated_at: new Date().toISOString() }).eq("key", key);
+  } else {
+    await supabase.from("settings").insert({ key, value, updated_at: new Date().toISOString() });
+  }
+}
+
 export async function GET() {
   const supabase = await createClient();
   const { data } = await supabase
@@ -33,12 +42,8 @@ export async function POST(request: Request) {
 
   const next_scrape_at = schedule === "off" ? null : new Date().toISOString();
 
-  const upserts = [
-    { key: "kvk_scrape_schedule", value: schedule, updated_at: new Date().toISOString() },
-    { key: "kvk_next_scrape_at", value: next_scrape_at ?? "", updated_at: new Date().toISOString() },
-  ];
-
-  await supabase.from("settings").upsert(upserts, { onConflict: "key" });
+  await upsertSetting(supabase, "kvk_scrape_schedule", schedule);
+  await upsertSetting(supabase, "kvk_next_scrape_at", next_scrape_at ?? "");
 
   const display_next = schedule === "off" ? null : nextCronBoundary().toISOString();
   return NextResponse.json({ schedule, next_scrape_at: display_next });

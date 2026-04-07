@@ -19,9 +19,11 @@ interface ScraperJob {
 
 export async function POST(request: Request) {
   const cronSecret = request.headers.get("x-cron-secret");
-  const isInternal = cronSecret && cronSecret === process.env.CRON_SECRET;
+  const isVercelCron = request.headers.get("x-vercel-cron") === "1";
+  const isInternal = isVercelCron || (cronSecret && cronSecret === process.env.CRON_SECRET);
   const overrideUserId = isInternal ? request.headers.get("x-user-id") : null;
   const supabase = isInternal ? await createServiceClient() : await createClient();
+  console.log("[scrape] auth", { isInternal, isVercelCron, cronSecretMatch: cronSecret === process.env.CRON_SECRET });
   const scraperUrl = process.env.SCRAPER_URL;
 
   if (!scraperUrl) {
