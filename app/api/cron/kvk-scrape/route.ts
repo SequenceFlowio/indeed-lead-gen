@@ -5,11 +5,20 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const secret = searchParams.get("secret");
   const authHeader = request.headers.get("authorization");
+  const isVercelCron = request.headers.get("x-vercel-cron") === "1";
+
+  console.log("[cron/kvk-scrape] invoked", {
+    isVercelCron,
+    hasAuthHeader: !!authHeader,
+    authHeaderMatch: authHeader === `Bearer ${process.env.CRON_SECRET}`,
+    hasCronSecret: !!process.env.CRON_SECRET,
+  });
 
   const authorized =
-    process.env.CRON_SECRET &&
-    (authHeader === `Bearer ${process.env.CRON_SECRET}` ||
-      secret === process.env.CRON_SECRET);
+    isVercelCron ||
+    (process.env.CRON_SECRET &&
+      (authHeader === `Bearer ${process.env.CRON_SECRET}` ||
+        secret === process.env.CRON_SECRET));
 
   if (!authorized) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
