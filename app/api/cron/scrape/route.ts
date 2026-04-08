@@ -1,7 +1,16 @@
-import { createServiceClient } from "@/lib/supabase/server";
 import { qualifyLead, generateEmail, findContactEmail, isValidEmail } from "@/lib/openai";
 import { sendEmail } from "@/lib/mailer";
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+
+function getServiceClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  return createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { apikey: key, Authorization: `Bearer ${key}` } },
+  });
+}
 
 interface ScraperJob {
   id?: string;
@@ -33,7 +42,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const supabase = await createServiceClient();
+  const supabase = getServiceClient();
   const scraperUrl = process.env.SCRAPER_URL;
 
   if (!scraperUrl) {
