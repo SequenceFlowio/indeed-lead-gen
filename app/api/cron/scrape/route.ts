@@ -49,26 +49,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "SCRAPER_URL not configured" }, { status: 500 });
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  // Return env info immediately for debugging
-  return NextResponse.json({
-    debug: true,
-    supabaseUrl: supabaseUrl?.slice(0, 40),
-    hasServiceKey: !!serviceKey,
-    serviceKeySuffix: serviceKey?.slice(-6),
-    scraperUrl: process.env.SCRAPER_URL?.slice(0, 30),
-  });
-
-  // eslint-disable-next-line no-unreachable
+  // Fetch active search queries
   const { data: queries, error: qError } = await supabase
     .from("search_queries")
     .select("*")
     .eq("active", true);
 
   if (qError || !queries || queries.length === 0) {
-    return NextResponse.json({ error: "Geen actieve zoekopdrachten gevonden" }, { status: 400 });
+    return NextResponse.json({ error: "Geen actieve zoekopdrachten gevonden", detail: qError?.message }, { status: 400 });
   }
 
   // Load settings
