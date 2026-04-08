@@ -46,8 +46,10 @@ export async function GET(request: Request) {
     .select("*")
     .eq("active", true);
 
+  console.log("[cron/scrape] queries", { count: queries?.length, error: qError?.message, hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY, keyPrefix: process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(0, 10) });
+
   if (qError || !queries || queries.length === 0) {
-    return NextResponse.json({ error: "Geen actieve zoekopdrachten gevonden" }, { status: 400 });
+    return NextResponse.json({ error: "Geen actieve zoekopdrachten gevonden", debug: { qError: qError?.message, count: queries?.length ?? 0 } }, { status: 400 });
   }
 
   // Load settings
