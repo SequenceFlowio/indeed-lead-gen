@@ -49,6 +49,20 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "SCRAPER_URL not configured" }, { status: 500 });
   }
 
+  // Check schedule setting
+  const { data: scheduleRows } = await supabase.from("settings").select("value").eq("key", "scrape_schedule").limit(1);
+  const schedule = scheduleRows?.[0]?.value ?? "off";
+  if (schedule === "off") {
+    return NextResponse.json({ message: "Scheduler is uitgeschakeld" });
+  }
+
+  // Check next_scrape_at
+  const { data: nextRows } = await supabase.from("settings").select("value").eq("key", "next_scrape_at").limit(1);
+  const nextVal = nextRows?.[0]?.value;
+  if (nextVal && new Date() < new Date(nextVal)) {
+    return NextResponse.json({ message: "Nog niet aan de beurt", next: nextVal });
+  }
+
   // Fetch active search queries
   const { data: queries, error: qError } = await supabase
     .from("search_queries")
@@ -186,6 +200,13 @@ export async function GET(request: Request) {
         console.error(`[cron/scrape] auto-mode error lead ${lead.id}:`, err);
       }
     }
+  }
+
+  // Update next_scrape_at
+  const scheduleHours = parseInt(schedule);
+  if (scheduleHours > 0) {
+    const nextScrape = new Date(Date.now() + scheduleHours * 60 * 60 * 1000).toISOString();
+    await supabase.from("settings").update({ value: nextScrape, updated_at: new Date().toISOString() }).eq("key", "next_scrape_at");
   }
 
   return NextResponse.json({
