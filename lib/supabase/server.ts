@@ -28,11 +28,13 @@ export async function createClient() {
 }
 
 export async function createServiceClient() {
-  // Use supabase-js directly (not @supabase/ssr) so the service role key
-  // properly bypasses RLS without needing a session/cookies
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
   return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } }
+    key,
+    {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { headers: { Authorization: `Bearer ${key}` } },
+    }
   );
 }
