@@ -40,31 +40,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "SCRAPER_URL not configured" }, { status: 500 });
   }
 
-  // Check if schedule is enabled — skip only if explicitly "off"
-  const { data: scheduleRows } = await supabase
-    .from("settings")
-    .select("value")
-    .eq("key", "scrape_schedule")
-    .limit(1);
-
-  const schedule = scheduleRows?.[0]?.value ?? "off";
-  if (schedule === "off") {
-    return NextResponse.json({ message: "Scheduler is uitgeschakeld" });
-  }
-
-  // Check next_scrape_at — skip if not yet due
-  const { data: nextRows } = await supabase
-    .from("settings")
-    .select("value")
-    .eq("key", "next_scrape_at")
-    .limit(1);
-
-  const nextVal = nextRows?.[0]?.value;
-  if (nextVal && new Date() < new Date(nextVal)) {
-    return NextResponse.json({ message: "Nog niet aan de beurt", next: nextVal });
-  }
-
-  // Fetch active search queries directly (service client bypasses RLS)
+  // Fetch active search queries
   const { data: queries, error: qError } = await supabase
     .from("search_queries")
     .select("*")
@@ -83,7 +59,6 @@ export async function GET(request: Request) {
   const kvMap = Object.fromEntries((settingsRows ?? []).map((r: { key: string; value: string }) => [r.key, r.value]));
   const autoMode = kvMap["auto_mode"] ?? "off";
   const minScore = parseInt(kvMap["min_score_threshold"] ?? "6");
-  const scheduleHours = parseInt(schedule);
 
   // Blocklist
   const DEFAULT_BLOCKLIST = ["dhl","postnl","dpd","ups","fedex","tnt","albert heijn","jumbo","lidl","aldi","ikea","h&m","bol.com","coolblue","zalando","deloitte","kpmg","pwc","accenture","randstad","adecco","manpower","tempo-team","amazon","action","hema","ah","ahold","heineken","shell","philips","unilever","ns","transdev","arriva","connexxion","gemeente","provincie","rijksoverheid","ministerie","politie","defensie"];
@@ -96,7 +71,6 @@ export async function GET(request: Request) {
   }
 
   const exclusionTerms = blocklist.filter((t) => !t.includes(" ")).slice(0, 20).map((t) => `-${t}`).join(" ");
-  const limitPerQuery = 25;
   const scrapeStartedAt = new Date().toISOString();
   let totalScraped = 0, totalInserted = 0, totalSkipped = 0, totalBlocked = 0;
   const errors: string[] = [];
@@ -109,7 +83,7 @@ export async function GET(request: Request) {
         body: JSON.stringify({
           query: exclusionTerms ? `${q.query} ${exclusionTerms}` : q.query,
           location: "Nederland",
-          limit: limitPerQuery,
+          limit: 50,
         }),
         signal: AbortSignal.timeout(120000),
       });
@@ -156,12 +130,6 @@ export async function GET(request: Request) {
     } catch (err) {
       errors.push(`${q.query}: ${err instanceof Error ? err.message : "fout"}`);
     }
-  }
-
-  // Update next_scrape_at
-  if (scheduleHours > 0) {
-    const nextScrape = new Date(Date.now() + scheduleHours * 60 * 60 * 1000).toISOString();
-    await supabase.from("settings").update({ value: nextScrape, updated_at: new Date().toISOString() }).eq("key", "next_scrape_at");
   }
 
   // Auto-mode: qualify + email
@@ -211,5 +179,12 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json({ scraped: totalScraped, inserted: totalInserted, skipped: totalSkipped, blocked: totalBlocked, queries: queries.length, errors: errors.length ? errors : undefined });
+  return NextResponse.json({
+    scraped: totalScraped,
+    inserted: totalInserted,
+    skipped: totalSkipped,
+    blocked: totalBlocked,
+    queries: queries.length,
+    errors: errors.length ? errors : undefined,
+  });
 }
