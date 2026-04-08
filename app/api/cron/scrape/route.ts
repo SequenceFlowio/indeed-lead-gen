@@ -46,10 +46,20 @@ export async function GET(request: Request) {
     .select("*")
     .eq("active", true);
 
-  console.log("[cron/scrape] queries", { count: queries?.length, error: qError?.message, hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY, keyPrefix: process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(0, 10) });
-
   if (qError || !queries || queries.length === 0) {
-    return NextResponse.json({ error: "Geen actieve zoekopdrachten gevonden", debug: { qError: qError?.message, count: queries?.length ?? 0 } }, { status: 400 });
+    const anonKeyPrefix = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.slice(-6);
+    const serviceKeyPrefix = process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(-6);
+    return NextResponse.json({
+      error: "Geen actieve zoekopdrachten gevonden",
+      debug: {
+        qError: qError?.message,
+        count: queries?.length ?? 0,
+        // Last 6 chars — enough to tell if anon key == service key (they'd match if misconfigured)
+        anon_key_suffix: anonKeyPrefix,
+        service_key_suffix: serviceKeyPrefix,
+        keys_match: anonKeyPrefix === serviceKeyPrefix,
+      }
+    }, { status: 400 });
   }
 
   // Load settings
