@@ -49,26 +49,26 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "SCRAPER_URL not configured" }, { status: 500 });
   }
 
-  // Raw REST fetch to bypass client library entirely
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  const rawRes = await fetch(`${supabaseUrl}/rest/v1/search_queries?active=eq.true&select=*`, {
-    headers: {
-      apikey: serviceKey,
-      Authorization: `Bearer ${serviceKey}`,
-      "Content-Type": "application/json",
-    },
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  // Return env info immediately for debugging
+  return NextResponse.json({
+    debug: true,
+    supabaseUrl: supabaseUrl?.slice(0, 40),
+    hasServiceKey: !!serviceKey,
+    serviceKeySuffix: serviceKey?.slice(-6),
+    scraperUrl: process.env.SCRAPER_URL?.slice(0, 30),
   });
-  const rawBody = await rawRes.text();
 
-  if (!rawRes.ok) {
-    return NextResponse.json({ error: "REST query failed", status: rawRes.status, body: rawBody }, { status: 500 });
-  }
+  // eslint-disable-next-line no-unreachable
+  const { data: queries, error: qError } = await supabase
+    .from("search_queries")
+    .select("*")
+    .eq("active", true);
 
-  const queries = JSON.parse(rawBody);
-
-  if (!queries || queries.length === 0) {
-    return NextResponse.json({ error: "Geen actieve zoekopdrachten gevonden", raw_count: queries?.length }, { status: 400 });
+  if (qError || !queries || queries.length === 0) {
+    return NextResponse.json({ error: "Geen actieve zoekopdrachten gevonden" }, { status: 400 });
   }
 
   // Load settings
