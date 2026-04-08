@@ -218,15 +218,6 @@ export async function POST(request: Request) {
     }
   }
 
-  // Update next_scrape_at based on schedule
-  if (scheduleHours > 0) {
-    const nextScrape = new Date();
-    nextScrape.setHours(nextScrape.getHours() + scheduleHours);
-    await supabase.from("settings").upsert(
-      { key: "next_scrape_at", value: nextScrape.toISOString(), updated_at: new Date().toISOString() },
-      { onConflict: "key" }
-    );
-  }
 
   return NextResponse.json({
     scraped: totalScraped,
