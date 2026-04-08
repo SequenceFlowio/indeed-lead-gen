@@ -49,26 +49,26 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "SCRAPER_URL not configured" }, { status: 500 });
   }
 
-  // Fetch active search queries
-  const { data: queries, error: qError } = await supabase
-    .from("search_queries")
-    .select("*")
-    .eq("active", true);
+  // Raw REST fetch to bypass client library entirely
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  const rawRes = await fetch(`${supabaseUrl}/rest/v1/search_queries?active=eq.true&select=*`, {
+    headers: {
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+      "Content-Type": "application/json",
+    },
+  });
+  const rawBody = await rawRes.text();
 
-  if (qError || !queries || queries.length === 0) {
-    const anonKeyPrefix = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.slice(-6);
-    const serviceKeyPrefix = process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(-6);
-    return NextResponse.json({
-      error: "Geen actieve zoekopdrachten gevonden",
-      debug: {
-        qError: qError?.message,
-        count: queries?.length ?? 0,
-        // Last 6 chars — enough to tell if anon key == service key (they'd match if misconfigured)
-        anon_key_suffix: anonKeyPrefix,
-        service_key_suffix: serviceKeyPrefix,
-        keys_match: anonKeyPrefix === serviceKeyPrefix,
-      }
-    }, { status: 400 });
+  if (!rawRes.ok) {
+    return NextResponse.json({ error: "REST query failed", status: rawRes.status, body: rawBody }, { status: 500 });
+  }
+
+  const queries = JSON.parse(rawBody);
+
+  if (!queries || queries.length === 0) {
+    return NextResponse.json({ error: "Geen actieve zoekopdrachten gevonden", raw_count: queries?.length }, { status: 400 });
   }
 
   // Load settings
