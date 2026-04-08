@@ -1,4 +1,10 @@
 {
+  "functions": {
+    "app/api/cron/scrape/route.ts": { "maxDuration": 300 },
+    "app/api/cron/kvk-scrape/route.ts": { "maxDuration": 300 },
+    "app/api/scrape/route.ts": { "maxDuration": 300 },
+    "app/api/kvk/scrape/route.ts": { "maxDuration": 300 }
+  },
   "crons": [
     {
       "path": "/api/cron/scrape",
