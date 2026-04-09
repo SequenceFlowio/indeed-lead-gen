@@ -2,9 +2,8 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { formatDistanceToNow } from "date-fns";
-import { nl } from "date-fns/locale";
-import { Search, Mail, ExternalLink, CheckCircle2, XCircle, ChevronUp, ChevronDown, Trash2 } from "lucide-react";
+import { format } from "date-fns";
+import { Search, Send, ExternalLink, CheckCircle2, XCircle, ChevronUp, ChevronDown, Trash2 } from "lucide-react";
 import { Lead, LeadStatus } from "@/lib/types";
 import StatusBadge from "@/components/StatusBadge";
 import ScoreBadge from "@/components/ScoreBadge";
@@ -122,6 +121,23 @@ export default function LeadsTable({ leads, onRefresh }: LeadsTableProps) {
     }
   }
 
+  async function bulkSend() {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    setBulkLoading(true);
+    try {
+      await fetch("/api/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids, action: "send" }),
+      });
+      setSelected(new Set());
+      onRefresh?.();
+    } finally {
+      setBulkLoading(false);
+    }
+  }
+
   async function bulkAction(action: "approve" | "reject") {
     setBulkLoading(true);
     try {
@@ -199,44 +215,54 @@ export default function LeadsTable({ leads, onRefresh }: LeadsTableProps) {
       </div>
 
       {/* Bulk actions */}
-      {(selected.size > 0 || true) && (
-        <div className="flex items-center gap-2 flex-wrap">
-          {selected.size > 0 && (
-            <>
-              <span className="text-xs text-gray-500 dark:text-gray-400">{selected.size} geselecteerd</span>
-              {statusFilter === "rejected" ? (
+      {selected.size > 0 && (() => {
+        const selectedLeads = filtered.filter((l) => selected.has(l.id));
+        const canBulkSend = selectedLeads.every((l) => l.status === "email_ready" && !!l.contact_email);
+        return (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-gray-500 dark:text-gray-400">{selected.size} geselecteerd</span>
+            {canBulkSend && (
+              <button
+                onClick={bulkSend}
+                disabled={bulkLoading}
+                className="flex items-center gap-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors disabled:opacity-50"
+              >
+                <Send size={12} />
+                Verzend geselecteerde
+              </button>
+            )}
+            {statusFilter === "rejected" ? (
+              <button
+                onClick={bulkDelete}
+                disabled={bulkLoading}
+                className="flex items-center gap-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-3 py-1.5 text-xs font-medium text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50"
+              >
+                <Trash2 size={12} />
+                Verwijderen
+              </button>
+            ) : (
+              <>
                 <button
-                  onClick={bulkDelete}
+                  onClick={() => bulkAction("approve")}
+                  disabled={bulkLoading}
+                  className="flex items-center gap-1.5 rounded-lg bg-[#C7F56F]/10 border border-[#C7F56F]/30 px-3 py-1.5 text-xs font-medium text-[#3a6600] dark:text-[#C7F56F] hover:bg-[#C7F56F]/20 transition-colors disabled:opacity-50"
+                >
+                  <CheckCircle2 size={12} />
+                  Kwalificeren
+                </button>
+                <button
+                  onClick={() => bulkAction("reject")}
                   disabled={bulkLoading}
                   className="flex items-center gap-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-3 py-1.5 text-xs font-medium text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50"
                 >
-                  <Trash2 size={12} />
-                  Verwijderen
+                  <XCircle size={12} />
+                  Afwijzen
                 </button>
-              ) : (
-                <>
-                  <button
-                    onClick={() => bulkAction("approve")}
-                    disabled={bulkLoading}
-                    className="flex items-center gap-1.5 rounded-lg bg-[#C7F56F]/10 border border-[#C7F56F]/30 px-3 py-1.5 text-xs font-medium text-[#3a6600] dark:text-[#C7F56F] hover:bg-[#C7F56F]/20 transition-colors disabled:opacity-50"
-                  >
-                    <CheckCircle2 size={12} />
-                    Kwalificeren
-                  </button>
-                  <button
-                    onClick={() => bulkAction("reject")}
-                    disabled={bulkLoading}
-                    className="flex items-center gap-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-3 py-1.5 text-xs font-medium text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50"
-                  >
-                    <XCircle size={12} />
-                    Afwijzen
-                  </button>
-                </>
-              )}
-            </>
-          )}
-        </div>
-      )}
+              </>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Table */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
@@ -278,7 +304,7 @@ export default function LeadsTable({ leads, onRefresh }: LeadsTableProps) {
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
                     Status
                   </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
                     Email
                   </th>
                   <th
@@ -325,19 +351,12 @@ export default function LeadsTable({ leads, onRefresh }: LeadsTableProps) {
                     <td className="px-4 py-3">
                       <StatusBadge status={lead.status} />
                     </td>
-                    <td className="px-4 py-3 text-center">
-                      {lead.contact_email ? (
-                        <Mail size={14} className="inline text-[#C7F56F]" />
-                      ) : (
-                        <span className="text-gray-300 dark:text-gray-600">—</span>
-                      )}
+                    <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 max-w-[160px] truncate">
+                      {lead.contact_email ?? <span className="text-gray-300 dark:text-gray-600">—</span>}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
                       {lead.scraped_at
-                        ? formatDistanceToNow(new Date(lead.scraped_at), {
-                            addSuffix: true,
-                            locale: nl,
-                          })
+                        ? format(new Date(lead.scraped_at), "dd/MM/yy H:mm")
                         : "—"}
                     </td>
                     <td className="px-4 py-3">
