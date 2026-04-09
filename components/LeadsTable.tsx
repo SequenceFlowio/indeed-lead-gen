@@ -351,7 +351,7 @@ export default function LeadsTable({ leads, onRefresh }: LeadsTableProps) {
                     <td className="px-4 py-3">
                       <StatusBadge status={lead.status} />
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 max-w-[160px] truncate">
+                    <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 max-w-[160px] truncate" title={lead.contact_email ?? undefined}>
                       {lead.contact_email ?? <span className="text-gray-300 dark:text-gray-600">—</span>}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
