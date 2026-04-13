@@ -1,7 +1,45 @@
 import nodemailer from "nodemailer";
+import { createClient } from "@supabase/supabase-js";
 import { createServiceClient } from "@/lib/supabase/server";
 import { EmailAccount } from "@/lib/types";
 import { DEFAULT_EMAIL_TEMPLATE, TemplateVars, renderTemplate } from "@/lib/email-template";
+
+export async function sendNotification(to: string, subject: string, text: string): Promise<void> {
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { apikey: key, Authorization: `Bearer ${key}` } },
+  });
+
+  const { data: accounts } = await supabase
+    .from("email_accounts")
+    .select("*")
+    .eq("active", true)
+    .order("last_used_at", { ascending: true, nullsFirst: true })
+    .limit(1);
+
+  const account: EmailAccount | undefined = accounts?.[0];
+  if (!account) return;
+
+  const transporter = nodemailer.createTransport({
+    host: account.smtp_host,
+    port: account.smtp_port,
+    secure: account.smtp_port === 465,
+    auth: { user: account.smtp_user, pass: account.smtp_pass },
+    tls: { rejectUnauthorized: false },
+  });
+
+  try {
+    await transporter.sendMail({
+      from: `"${account.from_name}" <${account.from_email}>`,
+      to,
+      subject,
+      text,
+    });
+  } catch (err) {
+    console.error("[sendNotification] failed:", err);
+  }
+}
 
 export interface SendResult {
   success: boolean;

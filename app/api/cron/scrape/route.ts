@@ -1,5 +1,5 @@
 import { qualifyLead, generateEmail, findContactEmail, isValidEmail } from "@/lib/openai";
-import { sendEmail } from "@/lib/mailer";
+import { sendEmail, sendNotification } from "@/lib/mailer";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -210,6 +210,39 @@ export async function GET(request: Request) {
     const nextScrape = new Date(Date.now() + scheduleHours * 60 * 60 * 1000).toISOString();
     await supabase.from("settings").update({ value: nextScrape, updated_at: new Date().toISOString() }).eq("key", "next_scrape_at");
   }
+
+  // Count email_ready and sent leads added this run
+  const { count: emailReadyCount } = await supabase
+    .from("leads")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "email_ready")
+    .gte("scraped_at", scrapeStartedAt);
+
+  const { count: sentCount } = await supabase
+    .from("leads")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "sent")
+    .gte("scraped_at", scrapeStartedAt);
+
+  const now = new Date().toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" });
+  const reportText = [
+    `SequenceFlow scrape rapport — ${now}`,
+    "",
+    `Zoekopdrachten:  ${queries.length}`,
+    `Gescraped:       ${totalScraped}`,
+    `Nieuw ingevoerd: ${totalInserted}`,
+    `Geblokkeerd:     ${totalBlocked}`,
+    `Overgeslagen:    ${totalSkipped} (al in DB)`,
+    `Email klaar:     ${emailReadyCount ?? 0}`,
+    `Verzonden:       ${sentCount ?? 0}`,
+    errors.length ? `\nErrors:\n${errors.map((e) => `• ${e}`).join("\n")}` : "",
+  ].join("\n").trim();
+
+  await sendNotification(
+    "sequenceflownl@gmail.com",
+    `Scrape klaar — ${totalInserted} nieuw, ${emailReadyCount ?? 0} email klaar`,
+    reportText,
+  );
 
   return NextResponse.json({
     scraped: totalScraped,
