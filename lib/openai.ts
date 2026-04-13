@@ -70,41 +70,33 @@ export interface EmailResult {
 
 export async function generateEmail(lead: Lead, fromName?: string, fromEmail?: string): Promise<EmailResult> {
   const senderName = fromName ?? "Noah";
-  const senderEmail = fromEmail ?? "noah@getsequenceflow.nl";
 
-  const systemPrompt = `Je bent een senior business advisor bij SequenceFlow die een persoonlijke koude e-mail schrijft naar een bedrijf dat een vacature heeft geplaatst.
+  const systemPrompt = `Je schrijft een korte, persoonlijke koude e-mail namens SequenceFlow. Geen marketing, geen pitch. Klinkt als een echte persoon die iets opmerkt, niet als een bedrijf dat verkoopt.
 
-REGELS (strikt volgen):
-- Schrijf in formeel Nederlands (u/uw, NOOIT jij/je/jouw)
-- Geen opsommingstekens of lijsten
-- Geen AI-klingende woorden ("Graag", "Zeker", "Absoluut", "Ik hoop dat")
-- Maximum 150 woorden voor de body
-- 2 alinea's + 1 CTA-zin
-- Klink als een adviseur, niet als een verkoper
-- Geen specifieke euro-bedragen
-- Geen beloftes die je niet kunt waarmaken
-
-STRUCTUUR:
-Alinea 1: Observatie van de vacature + concrete berekening van tijdsbesparing (X uur per maand)
-Alinea 2: Hoe SequenceFlow dit specifiek kan oplossen + een concreet voorbeeld
-
-CTA: "Zou u open staan voor een kort gesprek om te kijken of dit relevant is voor [bedrijfsnaam]?"
-
-AFZENDER: ${senderEmail} (${senderName})
+REGELS (strikt):
+- Puur plain text — geen HTML, geen opmaak, geen opsommingstekens
+- Maximaal 60-90 woorden, 3-5 zinnen totaal
+- Schrijf in het Nederlands met "je/jij/jouw" (NOOIT "u/uw")
+- Geen bedrijfsintroductie ("wij zijn...", "SequenceFlow is een...")
+- Geen generieke zinnen ("oplossingen op maat", "processen optimaliseren", "efficiëntie verbeteren")
+- Geen "Met vriendelijke groet" of andere afsluiting — alleen de naam onderaan
+- Begin direct met een observatie over de specifieke vacature (functietitel + bedrijfsnaam)
+- Noem ÉÉN concreet pijnpunt dat duidelijk uit de vacature blijkt
+- Noem een concreet resultaat, bijv. "scheelt ~15-20 uur per maand"
+- Sluit af met een zachte, lage-drempel vraag (bijv. "Zou het de moeite waard zijn om daar even naar te kijken?")
+- Klinkt als een snelle, persoonlijke observatie — niet als een mass mail of template
 
 Geef ALLEEN een JSON-object terug:
 {
-  "subject": <onderwerpregel in het Nederlands>,
-  "body": <e-mailbody, alinea's gescheiden door \\n\\n>
+  "subject": <korte persoonlijke onderwerpregel, max 8 woorden, geen "Betreft:">,
+  "body": <volledige e-mailtekst, alinea's gescheiden door \\n\\n, eindigend met alleen de naam "${senderName}">
 }`;
 
   const userPrompt = `Vacaturetitel: ${lead.title}
 Bedrijf: ${lead.company}
 Locatie: ${lead.location}
-AI Selling Point: ${lead.ai_key_selling_point ?? "niet bekend"}
-Best Flow: ${lead.ai_best_flow ?? "Operations Flow"}
-Best Pitch: ${lead.ai_best_pitch ?? "procesautomatisering"}
-Beschrijving (fragment): ${lead.description?.slice(0, 1000) ?? "geen beschrijving"}`;
+Concreet pijnpunt: ${lead.ai_key_selling_point ?? "niet bekend"}
+Beschrijving (fragment): ${lead.description?.slice(0, 800) ?? "geen beschrijving"}`;
 
   const response = await getOpenAI().chat.completions.create({
     model: "gpt-4o-mini",
@@ -131,23 +123,28 @@ export async function findContactEmail(
   location: string | null,
   title?: string | null
 ): Promise<ContactEmailResult> {
-  const prompt = `Find the contact email address for this Dutch company. Search their website, LinkedIn, KVK, and Google.
+  const prompt = `You need to find a real contact email address for a Dutch company. Search thoroughly — try multiple approaches.
 
-Company name: ${company}
+Company: ${company}
 Location: ${location ?? "Nederland"}
-Job title they are hiring for: ${title ?? "onbekend"}
+Hiring for: ${title ?? "unknown"}
 
-Steps:
-1. Search Google for "${company} ${location ?? ""} contact email"
-2. Visit their website and look for contact/over-ons pages
-3. Look for any email address (info@, contact@, direct person email)
+Search steps (try all of these):
+1. Search Google: "${company} ${location ?? ""} email contact"
+2. Search Google: "${company} site:linkedin.com"
+3. Visit their company website — look at /contact, /over-ons, /contact-us pages for any email
+4. Search Google: "${company} ${location ?? ""} @" to find email mentions
+5. Check KVK (kvk.nl) for company contact details
 
-Return ONLY a JSON object, no other text:
-{"email": "found@email.com or null if not found", "confidence": "high or medium or low or none", "source": "brief description of where you found it"}`;
+Accept any email: info@, contact@, hallo@, a direct person's email — whatever you can find.
+Do NOT guess or make up email addresses.
+
+Return ONLY valid JSON, nothing else:
+{"email": "found@email.com or null if not found", "confidence": "high or medium or low or none", "source": "where you found it"}`;
 
   try {
     const response = await getOpenAI().responses.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4o",
       tools: [{ type: "web_search_preview_2025_03_11" as "web_search_preview_2025_03_11" }],
       input: prompt,
     });
@@ -238,41 +235,33 @@ SBI-codes: ${company.sbi_codes?.join(", ") ?? "onbekend"}`;
 
 export async function generateKVKEmail(company: KVKCompanyInput & { ai_key_selling_point?: string | null; ai_best_flow?: string | null; ai_best_pitch?: string | null }, fromName?: string, fromEmail?: string): Promise<EmailResult> {
   const senderName = fromName ?? "Noah";
-  const senderEmail = fromEmail ?? "noah@getsequenceflow.nl";
 
-  const systemPrompt = `Je bent een senior business advisor bij SequenceFlow die een persoonlijke koude e-mail schrijft naar een bedrijf.
+  const systemPrompt = `Je schrijft een korte, persoonlijke koude e-mail namens SequenceFlow. Geen marketing, geen pitch. Klinkt als een echte persoon die iets opmerkt, niet als een bedrijf dat verkoopt.
 
-REGELS (strikt volgen):
-- Schrijf in formeel Nederlands (u/uw, NOOIT jij/je/jouw)
-- Geen opsommingstekens of lijsten
-- Geen AI-klingende woorden ("Graag", "Zeker", "Absoluut", "Ik hoop dat")
-- Maximum 150 woorden voor de body
-- 2 alinea's + 1 CTA-zin
-- Klink als een adviseur, niet als een verkoper
-- Geen specifieke euro-bedragen
-- Geen beloftes die je niet kunt waarmaken
-
-STRUCTUUR:
-Alinea 1: Observatie over het bedrijf + concrete berekening van tijdsbesparing (X uur per maand)
-Alinea 2: Hoe SequenceFlow dit specifiek kan oplossen + een concreet voorbeeld
-
-CTA: "Zou u open staan voor een kort gesprek om te kijken of dit relevant is voor [bedrijfsnaam]?"
-
-AFZENDER: ${senderEmail} (${senderName})
+REGELS (strikt):
+- Puur plain text — geen HTML, geen opmaak, geen opsommingstekens
+- Maximaal 60-90 woorden, 3-5 zinnen totaal
+- Schrijf in het Nederlands met "je/jij/jouw" (NOOIT "u/uw")
+- Geen bedrijfsintroductie ("wij zijn...", "SequenceFlow is een...")
+- Geen generieke zinnen ("oplossingen op maat", "processen optimaliseren", "efficiëntie verbeteren")
+- Geen "Met vriendelijke groet" of andere afsluiting — alleen de naam onderaan
+- Begin direct met een observatie over het bedrijf (bedrijfsnaam + branche/type)
+- Noem ÉÉN concreet pijnpunt dat bij dit type bedrijf past
+- Noem een concreet resultaat, bijv. "scheelt ~15-20 uur per maand"
+- Sluit af met een zachte, lage-drempel vraag (bijv. "Zou het de moeite waard zijn om daar even naar te kijken?")
+- Klinkt als een snelle, persoonlijke observatie — niet als een mass mail of template
 
 Geef ALLEEN een JSON-object terug:
 {
-  "subject": <onderwerpregel in het Nederlands>,
-  "body": <e-mailbody, alinea's gescheiden door \\n\\n>
+  "subject": <korte persoonlijke onderwerpregel, max 8 woorden, geen "Betreft:">,
+  "body": <volledige e-mailtekst, alinea's gescheiden door \\n\\n, eindigend met alleen de naam "${senderName}">
 }`;
 
   const userPrompt = `Bedrijfsnaam: ${company.name ?? "onbekend"}
 Stad: ${company.city ?? "onbekend"}
 Rechtsvorm: ${company.legal_form ?? "onbekend"}
 SBI-codes: ${company.sbi_codes?.join(", ") ?? "onbekend"}
-AI Selling Point: ${company.ai_key_selling_point ?? "niet bekend"}
-Best Flow: ${company.ai_best_flow ?? "Operations Flow"}
-Best Pitch: ${company.ai_best_pitch ?? "procesautomatisering"}`;
+Concreet pijnpunt: ${company.ai_key_selling_point ?? "niet bekend"}`;
 
   const response = await getOpenAI().chat.completions.create({
     model: "gpt-4o-mini",
