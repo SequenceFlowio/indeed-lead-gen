@@ -89,6 +89,8 @@ export async function POST(request: Request) {
           query: exclusionTerms ? `${q.query} ${exclusionTerms}` : q.query,
           location: "Nederland",
           limit: limitPerQuery,
+          sort: "date",
+          fromage: 14,
         }),
         signal: AbortSignal.timeout(120000),
       });

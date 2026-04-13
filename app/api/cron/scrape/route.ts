@@ -107,6 +107,8 @@ export async function GET(request: Request) {
           query: exclusionTerms ? `${q.query} ${exclusionTerms}` : q.query,
           location: "Nederland",
           limit: 50,
+          sort: "date",
+          fromage: 14,
         }),
         signal: AbortSignal.timeout(120000),
       });
