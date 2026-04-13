@@ -204,6 +204,10 @@ export async function GET(request: Request) {
     }
   }
 
+  // Auto-delete rejected leads older than 48 hours
+  const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+  await supabase.from("leads").delete().eq("status", "rejected").lt("rejected_at", cutoff);
+
   // Update next_scrape_at
   const scheduleHours = parseInt(schedule);
   if (scheduleHours > 0) {
