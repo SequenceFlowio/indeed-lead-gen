@@ -162,7 +162,8 @@ export default function KVKSettingsPage() {
       setNewQuery({ ...DEFAULT_QUERY, sbi_codes_raw: DEFAULT_SBI_CODES.join(", ") });
       showSuccess("Zoekopdracht toegevoegd");
     } else {
-      showError("Toevoegen mislukt");
+      const err = await res.json().catch(() => ({}));
+      showError(`Toevoegen mislukt: ${err.error ?? res.status}`);
     }
     setAdding(false);
   }
