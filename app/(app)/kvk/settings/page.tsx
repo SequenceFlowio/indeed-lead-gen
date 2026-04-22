@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Plus, Trash2, Save, Loader2, ToggleLeft, ToggleRight } from "lucide-react";
 import { KVKSearchQuery } from "@/lib/types";
 
-const DEFAULT_SBI_CODES = ["47910", "47919", "49410", "52101", "52109", "52291", "52299", "82920"];
+const DEFAULT_SBI_CODES = ["webshop", "logistiek", "fulfillment", "groothandel", "ecommerce", "opslag", "transport", "expediteur"];
 
 
 const PROVINCE_OPTIONS = [
@@ -301,11 +301,11 @@ export default function KVKSettingsPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-200">SBI codes (kommagescheiden)</label>
+                <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-200">Zoekwoorden (kommagescheiden)</label>
                 <input
                   value={newQuery.sbi_codes_raw}
                   onChange={(e) => setNewQuery({ ...newQuery, sbi_codes_raw: e.target.value })}
-                  placeholder="47910, 49410, 52101"
+                  placeholder="webshop, logistiek, fulfillment"
                   className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30"
                 />
               </div>
@@ -384,7 +384,7 @@ export default function KVKSettingsPage() {
               <thead>
                 <tr className="border-b border-gray-100 dark:border-gray-800">
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Label</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">SBI codes</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Zoekwoorden</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Provincie</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Max leeftijd</th>
                   <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Actief</th>
@@ -415,7 +415,7 @@ export default function KVKSettingsPage() {
           )}
         </div>
         <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
-          Per SBI code worden {"{results_per_page}"} resultaten opgehaald uit de KVK API.
+          Per zoekwoord worden max. {"{results_per_page}"} bedrijven opgehaald via de KVK API (bedrijfsnaam-zoekopdracht).
         </p>
       </section>
 

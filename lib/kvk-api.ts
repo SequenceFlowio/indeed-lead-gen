@@ -88,20 +88,18 @@ export interface KVKCompanyMapped {
   sbi_codes: string[];
 }
 
-export async function searchKVK(query: KVKSearchQuery, sbiCode: string): Promise<KVKCompanyMapped[]> {
+export async function searchKVK(query: KVKSearchQuery, keyword: string): Promise<KVKCompanyMapped[]> {
   const apiKey = process.env.KVK_API_KEY;
   if (!apiKey) {
     throw new Error("KVK_API_KEY is not configured");
   }
 
   const params = new URLSearchParams({
+    naam: keyword,
     type: "hoofdvestiging",
-    actief: "true",
+    inclusiefInactieveRegistraties: "false",
     resultatenPerPagina: String(query.results_per_page ?? 10),
   });
-
-  if (sbiCode) params.set("sbi", sbiCode);
-  if (query.legal_form && query.legal_form !== "all") params.set("rechtsvorm", query.legal_form);
 
   const url = `${KVK_API_BASE}/zoeken?${params.toString()}`;
 
