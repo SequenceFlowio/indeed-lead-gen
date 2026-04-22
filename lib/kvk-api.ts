@@ -107,8 +107,9 @@ export async function searchKVK(query: KVKSearchQuery, sbiCode: string): Promise
 
   const res = await fetch(url, {
     headers: {
-      apikey: apiKey,
-      Accept: "application/json",
+      "apikey": apiKey,
+      "API-key": apiKey,
+      "Accept": "application/json",
     },
     signal: AbortSignal.timeout(30000),
   });
