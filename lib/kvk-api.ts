@@ -1,6 +1,6 @@
 import { KVKSearchQuery } from "@/lib/types";
 
-const KVK_API_BASE = "https://api.kvk.nl/api/v1";
+const KVK_API_BASE = "https://api.kvk.nl/api/v2";
 
 export interface KVKCompanyRaw {
   kvkNummer: string;
@@ -115,7 +115,8 @@ export async function searchKVK(query: KVKSearchQuery, sbiCode: string): Promise
   });
 
   if (!res.ok) {
-    throw new Error(`KVK API error: HTTP ${res.status}`);
+    const body = await res.text().catch(() => "");
+    throw new Error(`KVK API HTTP ${res.status}: ${body.slice(0, 200)}`);
   }
 
   const json = await res.json();
