@@ -1,5 +1,5 @@
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { qualifyKVKCompany, generateKVKEmail, findContactEmail, isValidEmail } from "@/lib/openai";
+import { qualifyKVKCompany, generateKVKEmail, enrichKVKCompany, isValidEmail } from "@/lib/openai";
 import { sendEmail } from "@/lib/mailer";
 import { searchKVK } from "@/lib/kvk-api";
 import { NextResponse } from "next/server";
@@ -92,7 +92,10 @@ export async function POST(request: Request) {
 
         for (const company of newCompanies) {
           try {
-            const qualResult = await qualifyKVKCompany(company);
+            // Enrich: find website, read services, grab email in one web search
+            const enrichment = await enrichKVKCompany(company.name ?? "", company.city);
+
+            const qualResult = await qualifyKVKCompany(company, enrichment.services_description);
             const isGood = qualResult.score >= minScore;
 
             await supabase.from("kvk_companies").update({
@@ -104,6 +107,9 @@ export async function POST(request: Request) {
               ai_company_size: qualResult.company_size_estimate,
               ai_best_flow: qualResult.best_flow,
               ai_best_pitch: qualResult.best_pitch,
+              website: enrichment.website,
+              contact_email: isValidEmail(enrichment.contact_email ?? "") ? enrichment.contact_email : null,
+              email_confidence: enrichment.email_confidence,
               status: isGood ? "qualified" : "rejected",
               qualified_at: isGood ? new Date().toISOString() : null,
               rejected_at: isGood ? null : new Date().toISOString(),
@@ -116,24 +122,18 @@ export async function POST(request: Request) {
             accountIndex++;
 
             const qualifiedCompany = { ...company, ...qualResult };
-            const [emailResult, contactResult] = await Promise.all([
-              generateKVKEmail(qualifiedCompany, account.from_name, account.from_email),
-              findContactEmail(company.name ?? "", company.city, null),
-            ]);
-
-            const emailValid = contactResult.email && isValidEmail(contactResult.email);
+            const emailResult = await generateKVKEmail(qualifiedCompany, account.from_name, account.from_email);
+            const emailValid = isValidEmail(enrichment.contact_email ?? "");
 
             await supabase.from("kvk_companies").update({
               draft_subject: emailResult.subject,
               draft_email: emailResult.body,
-              contact_email: emailValid ? contactResult.email : null,
-              email_confidence: contactResult.confidence,
               status: "email_ready",
               updated_at: new Date().toISOString(),
             }).eq("id", company.id);
 
-            if (autoMode === "send" && emailValid && contactResult.email) {
-              const sendResult = await sendEmail(contactResult.email, emailResult.subject, emailResult.body, company.id, undefined);
+            if (autoMode === "send" && emailValid && enrichment.contact_email) {
+              const sendResult = await sendEmail(enrichment.contact_email, emailResult.subject, emailResult.body, company.id, undefined);
               if (sendResult.success) {
                 await supabase.from("kvk_companies").update({
                   status: "sent",

@@ -185,7 +185,54 @@ export interface KVKCompanyInput {
   province: string | null;
 }
 
-export async function qualifyKVKCompany(company: KVKCompanyInput): Promise<QualificationResult> {
+export interface KVKEnrichmentResult {
+  website: string | null;
+  services_description: string | null;
+  contact_email: string | null;
+  email_confidence: "high" | "medium" | "low" | "none";
+}
+
+export async function enrichKVKCompany(name: string, city: string | null): Promise<KVKEnrichmentResult> {
+  const prompt = `Research this Dutch company and return everything you can find in one search session.
+
+Company: ${name}
+City: ${city ?? "Nederland"}
+
+Steps:
+1. Search Google: "${name} ${city ?? ""}"
+2. Find and visit their website — read the homepage and /diensten, /over-ons, or /contact page
+3. Also look for their email address (info@, contact@, or direct person email)
+
+Return ONLY valid JSON:
+{
+  "website": "https://... or null",
+  "services_description": "2-4 sentence summary in Dutch of what this company does, their sector, and scale. Mention specifics like: do they sell online, handle logistics, do warehousing, run a webshop, etc.",
+  "contact_email": "found@email.com or null",
+  "email_confidence": "high or medium or low or none"
+}`;
+
+  try {
+    const response = await getOpenAI().responses.create({
+      model: "gpt-4o",
+      tools: [{ type: "web_search_preview_2025_03_11" as "web_search_preview_2025_03_11" }],
+      input: prompt,
+    });
+
+    const text = response.output_text ?? "";
+    const stripped = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+    const jsonMatch = stripped.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return { website: null, services_description: null, contact_email: null, email_confidence: "none" };
+
+    const parsed = JSON.parse(jsonMatch[0]) as KVKEnrichmentResult;
+    if (parsed.contact_email === "null" || parsed.contact_email === "") parsed.contact_email = null;
+    return parsed;
+  } catch (err) {
+    console.error("[enrichKVKCompany] error:", err);
+    return { website: null, services_description: null, contact_email: null, email_confidence: "none" };
+  }
+}
+
+export async function qualifyKVKCompany(company: KVKCompanyInput, servicesDescription?: string | null): Promise<QualificationResult> {
   const systemPrompt = `Je bent een B2B sales qualifier voor SequenceFlow, een Nederlands automatiseringsbedrijf dat MKB-bedrijven helpt met procesautomatisering.
 
 Beoordeel het volgende bedrijf en geef een kwalificatiescore:
@@ -217,7 +264,7 @@ Stad: ${company.city ?? "onbekend"}
 Provincie: ${company.province ?? "onbekend"}
 Rechtsvorm: ${company.legal_form ?? "onbekend"}
 Oprichtingsdatum: ${company.registration_date ?? "onbekend"}
-SBI-codes: ${company.sbi_codes?.join(", ") ?? "onbekend"}`;
+${servicesDescription ? `Wat het bedrijf doet (website): ${servicesDescription}` : ""}`;
 
   const response = await getOpenAI().chat.completions.create({
     model: "gpt-4o-mini",

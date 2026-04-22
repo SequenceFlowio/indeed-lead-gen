@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { qualifyKVKCompany } from "@/lib/openai";
+import { qualifyKVKCompany, enrichKVKCompany, isValidEmail } from "@/lib/openai";
 import { NextResponse } from "next/server";
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -9,7 +9,8 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const { data: company, error } = await supabase.from("kvk_companies").select("*").eq("id", id).single();
   if (error || !company) return NextResponse.json({ error: "Niet gevonden" }, { status: 404 });
 
-  const result = await qualifyKVKCompany(company);
+  const enrichment = await enrichKVKCompany(company.name ?? "", company.city);
+  const result = await qualifyKVKCompany(company, enrichment.services_description);
 
   const { data: updated } = await supabase
     .from("kvk_companies")
@@ -22,6 +23,9 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       ai_company_size: result.company_size_estimate,
       ai_best_flow: result.best_flow,
       ai_best_pitch: result.best_pitch,
+      website: enrichment.website,
+      contact_email: isValidEmail(enrichment.contact_email ?? "") ? enrichment.contact_email : null,
+      email_confidence: enrichment.email_confidence,
       status: "qualified",
       qualified_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
