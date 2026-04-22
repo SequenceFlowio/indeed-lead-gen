@@ -146,7 +146,7 @@ export async function searchKVK(query: KVKSearchQuery, keyword: string): Promise
         street: addr?.straatnaam ? `${addr.straatnaam} ${addr.huisnummer ?? ""}`.trim() : null,
         legal_form: item.rechtsvorm ?? null,
         registration_date: item.startdatum ?? null,
-        sbi_codes: [sbiCode],
+        sbi_codes: [keyword],
       };
     })
     .filter((item) => {
