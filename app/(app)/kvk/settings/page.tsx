@@ -159,7 +159,7 @@ export default function KVKSettingsPage() {
       const data = await res.json();
       setQueries((prev) => [...prev, data]);
       setShowAddForm(false);
-      setNewQuery({ ...DEFAULT_QUERY, sbi_codes_raw: DEFAULT_SBI_CODES.join(", ") });
+      setNewQuery({ ...DEFAULT_QUERY, sbi_codes_raw: "" });
       showSuccess("Zoekopdracht toegevoegd");
     } else {
       const err = await res.json().catch(() => ({}));
