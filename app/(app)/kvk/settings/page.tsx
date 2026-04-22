@@ -15,7 +15,7 @@ const PROVINCE_OPTIONS = [
 const DEFAULT_QUERY = {
   label: "Logistiek & Ecommerce",
   sector: "all",
-  sbi_codes: DEFAULT_SBI_CODES,
+  sbi_codes: DEFAULT_KEYWORDS,
   company_size_min: 10,
   company_size_max: 250,
   legal_form: "BV",
