@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Plus, Trash2, Save, Loader2, ToggleLeft, ToggleRight } from "lucide-react";
 import { KVKSearchQuery } from "@/lib/types";
 
-const DEFAULT_SBI_CODES = ["webshop", "logistiek", "fulfillment", "groothandel", "ecommerce", "opslag", "transport", "expediteur"];
+const DEFAULT_KEYWORDS = ["webshop", "logistiek", "fulfillment", "groothandel", "ecommerce", "opslag", "transport", "expediteur"];
 
 
 const PROVINCE_OPTIONS = [
@@ -29,7 +29,7 @@ export default function KVKSettingsPage() {
   const [loadingQueries, setLoadingQueries] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [adding, setAdding] = useState(false);
-  const [newQuery, setNewQuery] = useState({ ...DEFAULT_QUERY, sbi_codes_raw: DEFAULT_SBI_CODES.join(", ") });
+  const [newQuery, setNewQuery] = useState({ ...DEFAULT_QUERY, sbi_codes_raw: "" });
 
   const [schedule, setSchedule] = useState("off");
   const [nextScrapeAt, setNextScrapeAt] = useState<string | null>(null);
@@ -169,15 +169,18 @@ export default function KVKSettingsPage() {
   }
 
   async function seedDefault() {
-    const res = await fetch("/api/kvk/search-queries", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...DEFAULT_QUERY, active: true }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setQueries((prev) => [...prev, data]);
-      showSuccess("Standaard zoekopdracht toegevoegd");
+    const created: KVKSearchQuery[] = [];
+    for (const keyword of DEFAULT_KEYWORDS) {
+      const res = await fetch("/api/kvk/search-queries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...DEFAULT_QUERY, label: keyword, sbi_codes: [keyword], active: true }),
+      });
+      if (res.ok) created.push(await res.json());
+    }
+    if (created.length > 0) {
+      setQueries((prev) => [...prev, ...created]);
+      showSuccess(`${created.length} zoekopdrachten toegevoegd`);
     }
   }
 
@@ -305,7 +308,7 @@ export default function KVKSettingsPage() {
                 <input
                   value={newQuery.sbi_codes_raw}
                   onChange={(e) => setNewQuery({ ...newQuery, sbi_codes_raw: e.target.value })}
-                  placeholder="webshop, logistiek, fulfillment"
+                  placeholder="bijv. webshop"
                   className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30"
                 />
               </div>
