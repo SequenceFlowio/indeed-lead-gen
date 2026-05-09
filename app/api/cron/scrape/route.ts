@@ -195,7 +195,17 @@ export async function GET(request: Request) {
         if (autoMode === "send" && emailValid && contactResult.email) {
           const sendResult = await sendEmail(contactResult.email, emailResult.subject, emailResult.body, lead.id, lead);
           if (sendResult.success) {
-            await supabase.from("leads").update({ status: "sent", email_sent_at: new Date().toISOString(), sent_from_email: sendResult.from_email }).eq("id", lead.id);
+            await supabase.from("leads").update({
+              status: "sent",
+              email_sent_at: new Date().toISOString(),
+              followup_sent_at: null,
+              followup_1_sent_at: null,
+              followup_2_sent_at: null,
+              reply_received_at: null,
+              flow_stopped_at: null,
+              flow_stop_reason: null,
+              sent_from_email: sendResult.from_email,
+            }).eq("id", lead.id);
           }
         }
       } catch (err) {

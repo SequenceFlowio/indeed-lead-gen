@@ -34,6 +34,11 @@ create table if not exists leads (
   email_confidence text,
   email_sent_at timestamptz,
   followup_sent_at timestamptz,
+  followup_1_sent_at timestamptz,
+  followup_2_sent_at timestamptz,
+  reply_received_at timestamptz,
+  flow_stopped_at timestamptz,
+  flow_stop_reason text,
   sent_from_email text,
   bounce_type text check (bounce_type in ('hard','soft')),
   bounced_at timestamptz,
@@ -102,6 +107,11 @@ create table if not exists email_accounts (
   smtp_port int default 587,
   smtp_user text not null,
   smtp_pass text not null,
+  imap_host text,
+  imap_port int default 993,
+  imap_user text,
+  imap_pass text,
+  imap_secure boolean default true,
   active boolean default true,
   sent_count int default 0,
   last_used_at timestamptz,
@@ -168,6 +178,21 @@ create index if not exists bounces_email_idx on bounces(email);
 -- CREATE POLICY "user_bounces" ON bounces FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 -- ============================================================
 
+-- MIGRATION: Follow-ups + inbox reply detection
+-- ALTER TABLE leads ADD COLUMN IF NOT EXISTS followup_1_sent_at timestamptz;
+-- ALTER TABLE leads ADD COLUMN IF NOT EXISTS followup_2_sent_at timestamptz;
+-- ALTER TABLE leads ADD COLUMN IF NOT EXISTS reply_received_at timestamptz;
+-- ALTER TABLE leads ADD COLUMN IF NOT EXISTS flow_stopped_at timestamptz;
+-- ALTER TABLE leads ADD COLUMN IF NOT EXISTS flow_stop_reason text;
+-- ALTER TABLE email_accounts ADD COLUMN IF NOT EXISTS imap_host text;
+-- ALTER TABLE email_accounts ADD COLUMN IF NOT EXISTS imap_port int default 993;
+-- ALTER TABLE email_accounts ADD COLUMN IF NOT EXISTS imap_user text;
+-- ALTER TABLE email_accounts ADD COLUMN IF NOT EXISTS imap_pass text;
+-- ALTER TABLE email_accounts ADD COLUMN IF NOT EXISTS imap_secure boolean default true;
+-- CREATE INDEX IF NOT EXISTS leads_sent_from_email_idx ON leads(sent_from_email);
+-- CREATE INDEX IF NOT EXISTS leads_reply_received_at_idx ON leads(reply_received_at);
+-- ============================================================
+
 -- Auto-update updated_at on leads
 create or replace function update_updated_at_column()
 returns trigger as $$
@@ -176,6 +201,8 @@ begin
   return new;
 end;
 $$ language plpgsql;
+
+drop trigger if exists leads_updated_at on leads;
 
 create trigger leads_updated_at
   before update on leads

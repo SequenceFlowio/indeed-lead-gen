@@ -10,7 +10,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const { name, from_name, from_email, smtp_host, smtp_port, smtp_user, smtp_pass } = body;
+  const { name, from_name, from_email, smtp_host, smtp_port, smtp_user, smtp_pass, imap_host, imap_port, imap_user, imap_pass, imap_secure } = body;
 
   if (!name || !from_email || !smtp_host || !smtp_user || !smtp_pass) {
     return NextResponse.json({ error: "Verplichte velden ontbreken" }, { status: 400 });
@@ -19,7 +19,21 @@ export async function POST(request: Request) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("email_accounts")
-    .insert({ name, from_name: from_name || name, from_email, smtp_host, smtp_port: smtp_port ?? 587, smtp_user, smtp_pass, active: true })
+    .insert({
+      name,
+      from_name: from_name || name,
+      from_email,
+      smtp_host,
+      smtp_port: smtp_port ?? 587,
+      smtp_user,
+      smtp_pass,
+      imap_host: imap_host || null,
+      imap_port: imap_port || 993,
+      imap_user: imap_user || null,
+      imap_pass: imap_pass || null,
+      imap_secure: imap_secure ?? true,
+      active: true,
+    })
     .select()
     .single();
 

@@ -41,6 +41,11 @@ export interface Lead {
   email_confidence: string | null;
   email_sent_at: string | null;
   followup_sent_at: string | null;
+  followup_1_sent_at: string | null;
+  followup_2_sent_at: string | null;
+  reply_received_at: string | null;
+  flow_stopped_at: string | null;
+  flow_stop_reason: string | null;
   sent_from_email: string | null;
   bounce_type: "hard" | "soft" | null;
   bounced_at: string | null;
@@ -71,6 +76,11 @@ export interface EmailAccount {
   smtp_port: number;
   smtp_user: string;
   smtp_pass: string;
+  imap_host: string | null;
+  imap_port: number | null;
+  imap_user: string | null;
+  imap_pass: string | null;
+  imap_secure: boolean | null;
   active: boolean;
   sent_count: number;
   last_used_at: string | null;

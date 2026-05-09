@@ -208,6 +208,12 @@ export async function POST(request: Request) {
                 await supabase.from("leads").update({
                   status: "sent",
                   email_sent_at: new Date().toISOString(),
+                  followup_sent_at: null,
+                  followup_1_sent_at: null,
+                  followup_2_sent_at: null,
+                  reply_received_at: null,
+                  flow_stopped_at: null,
+                  flow_stop_reason: null,
                   sent_from_email: sendResult.from_email,
                 }).eq("id", lead.id);
               }

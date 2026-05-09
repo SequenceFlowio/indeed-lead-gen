@@ -131,12 +131,12 @@ export default function EmailsPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">E-mails</h1>
           <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">Beheer en verstuur e-mails naar gekwalificeerde leads</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={fetchLeads}
             disabled={loading}
@@ -191,7 +191,7 @@ export default function EmailsPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 rounded-lg bg-gray-100 dark:bg-gray-800 p-1 w-fit">
+      <div className="flex w-full gap-1 overflow-x-auto rounded-lg bg-gray-100 p-1 dark:bg-gray-800 sm:w-fit">
         {([["qualified", "Gekwalificeerd"], ["email_ready", "Klaar"], ["sent", "Verzonden"]] as [Tab, string][]).map(([value, label]) => (
           <button
             key={value}
@@ -233,7 +233,8 @@ export default function EmailsPage() {
             </p>
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[880px] text-sm">
             <thead>
               <tr className="border-b border-gray-100 dark:border-gray-800">
                 {(tab === "email_ready" || tab === "qualified") && (
@@ -341,6 +342,7 @@ export default function EmailsPage() {
               })}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

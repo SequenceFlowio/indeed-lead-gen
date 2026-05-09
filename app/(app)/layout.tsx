@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Header from "@/components/Header";
-import MobileBlock from "@/components/MobileBlock";
 
 export default async function AppLayout({
   children,
@@ -19,9 +18,8 @@ export default async function AppLayout({
 
   return (
     <>
-      <MobileBlock />
       <Header />
-      <main className="mx-auto max-w-6xl px-6 py-8">{children}</main>
+      <main className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-8">{children}</main>
     </>
   );
 }

@@ -67,6 +67,7 @@ export default function SettingsPage() {
   const [showPass, setShowPass] = useState(false);
   const [newAccount, setNewAccount] = useState({
     name: "", from_name: "", from_email: "", smtp_host: "", smtp_port: "587", smtp_user: "", smtp_pass: "",
+    imap_host: "", imap_port: "993", imap_user: "", imap_pass: "",
   });
 
   useEffect(() => {
@@ -241,12 +242,17 @@ export default function SettingsPage() {
     const res = await fetch("/api/email-accounts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...newAccount, smtp_port: parseInt(newAccount.smtp_port) || 587 }),
+      body: JSON.stringify({
+        ...newAccount,
+        smtp_port: parseInt(newAccount.smtp_port) || 587,
+        imap_port: parseInt(newAccount.imap_port) || 993,
+        imap_secure: true,
+      }),
     });
     if (res.ok) {
       const data = await res.json();
       setEmailAccounts((prev) => [...prev, data]);
-      setNewAccount({ name: "", from_name: "", from_email: "", smtp_host: "", smtp_port: "587", smtp_user: "", smtp_pass: "" });
+      setNewAccount({ name: "", from_name: "", from_email: "", smtp_host: "", smtp_port: "587", smtp_user: "", smtp_pass: "", imap_host: "", imap_port: "993", imap_user: "", imap_pass: "" });
       setShowAddAccountForm(false);
     }
     setAddingAccount(false);
@@ -412,7 +418,7 @@ export default function SettingsPage() {
 
         {showAddAccountForm && (
           <div className="mb-3 rounded-xl border border-[#C7F56F]/30 bg-[#C7F56F]/5 p-4 flex flex-col gap-3">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-200">Naam <span className="text-red-400">*</span></label>
                 <input value={newAccount.name} onChange={(e) => setNewAccount({ ...newAccount, name: e.target.value })} placeholder="noah@sequenceflow" className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30" />
@@ -437,7 +443,7 @@ export default function SettingsPage() {
                 <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-200">SMTP Gebruiker <span className="text-red-400">*</span></label>
                 <input value={newAccount.smtp_user} onChange={(e) => setNewAccount({ ...newAccount, smtp_user: e.target.value })} placeholder="noah@sequenceflow.io" className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30" />
               </div>
-              <div className="col-span-2">
+              <div className="sm:col-span-2">
                 <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-200">SMTP Wachtwoord <span className="text-red-400">*</span></label>
                 <div className="relative">
                   <input type={showPass ? "text" : "password"} value={newAccount.smtp_pass} onChange={(e) => setNewAccount({ ...newAccount, smtp_pass: e.target.value })} placeholder="••••••••" className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 pr-9 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30" />
@@ -445,6 +451,22 @@ export default function SettingsPage() {
                     {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
                 </div>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-200">IMAP Host</label>
+                <input value={newAccount.imap_host} onChange={(e) => setNewAccount({ ...newAccount, imap_host: e.target.value })} placeholder="imap.hostinger.com" className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-200">IMAP Poort</label>
+                <input type="number" value={newAccount.imap_port} onChange={(e) => setNewAccount({ ...newAccount, imap_port: e.target.value })} placeholder="993" className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-200">IMAP Gebruiker</label>
+                <input value={newAccount.imap_user} onChange={(e) => setNewAccount({ ...newAccount, imap_user: e.target.value })} placeholder="Leeg = SMTP gebruiker" className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-200">IMAP Wachtwoord</label>
+                <input type={showPass ? "text" : "password"} value={newAccount.imap_pass} onChange={(e) => setNewAccount({ ...newAccount, imap_pass: e.target.value })} placeholder="Leeg = SMTP wachtwoord" className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30" />
               </div>
             </div>
             <div className="flex gap-2">
@@ -478,7 +500,8 @@ export default function SettingsPage() {
               </p>
             </div>
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-sm">
               <thead>
                 <tr className="border-b border-gray-100 dark:border-gray-800">
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Naam</th>
@@ -510,10 +533,11 @@ export default function SettingsPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
         <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
-          E-mails worden automatisch verdeeld over actieve accounts (round-robin op basis van laatste gebruik).
+          E-mails worden als plain text verstuurd. Follow-ups en reply-detectie gebruiken IMAP; zonder IMAP probeert de app automatisch de SMTP-host naar IMAP te vertalen.
         </p>
       </section>
 
@@ -684,7 +708,7 @@ export default function SettingsPage() {
       <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6">
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">E-mail template</h2>
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Plain text e-mail template</h2>
             <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
               Gebruik <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">{"{{body}}"}</code>, <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">{"{{company}}"}</code>, <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">{"{{title}}"}</code>, <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">{"{{location}}"}</code>, <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">{"{{salary}}"}</code>, <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">{"{{url}}"}</code>, <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">{"{{from_email}}"}</code>
             </p>

@@ -31,7 +31,7 @@ export async function sendNotification(to: string, subject: string, text: string
 
   try {
     await transporter.sendMail({
-      from: `"${account.from_name}" <${account.from_email}>`,
+      from: `"${getSenderName(account)}" <${account.from_email}>`,
       to,
       subject,
       text,
@@ -44,25 +44,41 @@ export async function sendNotification(to: string, subject: string, text: string
 export interface SendResult {
   success: boolean;
   from_email?: string;
+  account_id?: string;
   error?: string;
+}
+
+interface SendEmailOptions {
+  accountEmail?: string | null;
+}
+
+export function getSenderName(account: Pick<EmailAccount, "from_email" | "from_name">): string {
+  const localPart = account.from_email.split("@")[0]?.trim();
+  return localPart || account.from_name || account.from_email;
 }
 
 export async function sendEmail(
   to: string,
   subject: string,
   body: string,
-  leadId: string,
-  lead?: { user_id?: string; company?: string | null; title?: string | null; location?: string | null; salary?: string | null; url?: string | null }
+  _leadId: string,
+  lead?: { user_id?: string; company?: string | null; title?: string | null; location?: string | null; salary?: string | null; url?: string | null },
+  options: SendEmailOptions = {}
 ): Promise<SendResult> {
   const supabase = await createServiceClient();
 
-  // Get least-recently-used active account (round-robin)
-  const { data: accounts, error } = await supabase
+  let accountQuery = supabase
     .from("email_accounts")
     .select("*")
-    .eq("active", true)
-    .order("last_used_at", { ascending: true, nullsFirst: true })
-    .limit(1);
+    .eq("active", true);
+
+  if (options.accountEmail) {
+    accountQuery = accountQuery.eq("from_email", options.accountEmail);
+  } else {
+    accountQuery = accountQuery.order("last_used_at", { ascending: true, nullsFirst: true });
+  }
+
+  const { data: accounts, error } = await accountQuery.limit(1);
 
   if (error || !accounts || accounts.length === 0) {
     return { success: false, error: "Geen actief e-mailaccount gevonden. Voeg een SMTP account toe in Instellingen." };
@@ -70,8 +86,7 @@ export async function sendEmail(
 
   const account: EmailAccount = accounts[0];
 
-  // Fetch user's custom template (or fall back to default)
-  let templateHtml = DEFAULT_EMAIL_TEMPLATE;
+  let template = DEFAULT_EMAIL_TEMPLATE;
   if (lead?.user_id) {
     const { data: tmplRow } = await supabase
       .from("settings")
@@ -79,7 +94,7 @@ export async function sendEmail(
       .eq("user_id", lead.user_id)
       .eq("key", "email_template")
       .maybeSingle();
-    if (tmplRow?.value) templateHtml = tmplRow.value;
+    if (tmplRow?.value) template = tmplRow.value;
   }
 
   const vars: TemplateVars = {
@@ -89,12 +104,12 @@ export async function sendEmail(
     title: lead?.title ?? "",
     location: lead?.location ?? "",
     salary: lead?.salary ?? "niet vermeld",
-    url: lead?.url ?? "#",
-    from_name: account.from_name ?? "",
-    from_email: account.from_email ?? "",
+    url: lead?.url ?? "",
+    from_name: getSenderName(account),
+    from_email: account.from_email,
   };
 
-  const htmlBody = renderTemplate(templateHtml, vars);
+  const textBody = renderTemplate(template, vars);
 
   const transporter = nodemailer.createTransport({
     host: account.smtp_host,
@@ -111,11 +126,11 @@ export async function sendEmail(
 
   try {
     await transporter.sendMail({
-      from: `"${account.from_name}" <${account.from_email}>`,
+      from: `"${getSenderName(account)}" <${account.from_email}>`,
       to,
       subject,
-      text: body,
-      html: htmlBody,
+      text: textBody,
+      replyTo: account.from_email,
     });
 
     await supabase
@@ -126,7 +141,7 @@ export async function sendEmail(
       })
       .eq("id", account.id);
 
-    return { success: true, from_email: account.from_email };
+    return { success: true, from_email: account.from_email, account_id: account.id };
   } catch (err) {
     const message = err instanceof Error ? err.message : "SMTP fout";
     return { success: false, error: message };

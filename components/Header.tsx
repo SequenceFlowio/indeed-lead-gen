@@ -64,7 +64,7 @@ export default function Header() {
 
   return (
     <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-[#111] sticky top-0 z-40">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-2">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-2 sm:px-6">
         {/* Logo */}
         <a
           href="https://getsequenceflow.nl"
@@ -77,13 +77,13 @@ export default function Header() {
             alt="SequenceFlow"
             height={96}
             width={480}
-            className="h-24 w-auto object-contain"
+            className="h-14 w-auto object-contain sm:h-20 lg:h-24"
             priority
           />
         </a>
 
         {/* Nav links */}
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="order-3 flex w-full items-center gap-1 overflow-x-auto pb-1 md:order-none md:w-auto md:pb-0">
           {backHref && (
             <Link
               href={backHref}

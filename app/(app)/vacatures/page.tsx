@@ -127,7 +127,7 @@ export default function DashboardPage() {
       )}
 
       {/* Page header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
             Vacatures Dashboard
@@ -136,7 +136,7 @@ export default function DashboardPage() {
             Overzicht van uw lead generation pipeline
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={fetchData}
             disabled={loading}
